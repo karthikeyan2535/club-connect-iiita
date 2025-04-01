@@ -9,6 +9,7 @@ import DashboardCard from '../../components/dashboard/DashboardCard';
 import { getClubsByStudent } from '../../services/clubs';
 import { getEventsByStudent } from '../../services/events';
 import { Calendar, UserCheck, Clock, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -20,12 +21,14 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   
   // Get user data from localStorage
-  const user = JSON.parse(localStorage.getItem('user')) || null;
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userRole = localStorage.getItem('userRole');
   
   useEffect(() => {
+    console.log("StudentDashboard loaded", { user, userRole });
+    
     // Check if user is logged in and is a student
-    if (!user || userRole !== 'student') {
+    if (!user || !user.id || userRole !== 'student') {
       toast({
         title: "Access denied",
         description: "You need to login as a student to access this page",
@@ -37,9 +40,14 @@ const StudentDashboard = () => {
     
     const fetchData = async () => {
       try {
+        console.log("Fetching student data for user ID:", user.id);
+        
         // Fetch clubs and events for the student
         const clubs = await getClubsByStudent(user.id);
         const events = await getEventsByStudent(user.id);
+        
+        console.log("Fetched clubs:", clubs);
+        console.log("Fetched events:", events);
         
         // Sort events by date
         const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -65,13 +73,47 @@ const StudentDashboard = () => {
     fetchData();
   }, [user, userRole, navigate, toast]);
   
+  // Render loading skeleton when data is being fetched
   if (loading) {
     return (
       <MainLayout>
-        <div className="container mx-auto px-4 py-12 text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading dashboard...</p>
-        </div>
+        <section className="bg-primary text-primary-foreground py-8 px-4">
+          <div className="container mx-auto max-w-6xl">
+            <Skeleton className="h-8 w-1/4 mb-2" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
+        </section>
+        
+        <section className="py-8 px-4">
+          <div className="container mx-auto max-w-6xl">
+            {/* Stats Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-32 rounded-lg" />
+              ))}
+            </div>
+            
+            {/* Clubs Skeleton */}
+            <div className="mb-12">
+              <Skeleton className="h-8 w-1/4 mb-6" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-64 rounded-lg" />
+                ))}
+              </div>
+            </div>
+            
+            {/* Events Skeleton */}
+            <div>
+              <Skeleton className="h-8 w-1/3 mb-6" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-64 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       </MainLayout>
     );
   }
@@ -82,7 +124,7 @@ const StudentDashboard = () => {
       <section className="bg-primary text-primary-foreground py-8 px-4">
         <div className="container mx-auto max-w-6xl">
           <h1 className="text-2xl md:text-3xl font-bold mb-2">Student Dashboard</h1>
-          <p className="opacity-90">Welcome back, {user.name}!</p>
+          <p className="opacity-90">Welcome back, {user.name || 'Student'}!</p>
         </div>
       </section>
       
