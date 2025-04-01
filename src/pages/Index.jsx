@@ -6,7 +6,7 @@ import ClubCard from '../components/clubs/ClubCard';
 import EventCard from '../components/events/EventCard';
 import { getClubs } from '../services/clubs';
 import { getEvents } from '../services/events';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ArrowRight } from 'lucide-react';
 
 const Index = () => {
   const [clubs, setClubs] = useState([]);
@@ -45,48 +45,36 @@ const Index = () => {
   return (
     <MainLayout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary to-secondary text-white py-16 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="md:w-1/2 space-y-6 animate-fade-in">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                Connect with IIITA Clubs
-              </h1>
-              <p className="text-lg md:text-xl opacity-90 max-w-lg">
-                Discover, join, and participate in various clubs and events at Indian Institute of Information Technology, Allahabad.
-              </p>
-              <div className="flex flex-wrap gap-4 pt-4">
-                <Link 
-                  to="/clubs" 
-                  className="bg-white text-primary font-medium px-6 py-3 rounded-md hover:bg-gray-100 transition-colors"
-                >
-                  Explore Clubs
-                </Link>
-                <Link 
-                  to="/events" 
-                  className="bg-accent text-white font-medium px-6 py-3 rounded-md hover:bg-accent/90 transition-colors"
-                >
-                  Upcoming Events
-                </Link>
-              </div>
-            </div>
-            <div className="md:w-1/2 animate-fade-in">
-              <img 
-                src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070&auto=format&fit=crop" 
-                alt="IIITA Students" 
-                className="w-full h-auto rounded-lg shadow-xl"
-              />
-            </div>
+      <section className="bg-[#f4f7ff] min-h-[70vh] flex items-center">
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Discover and Manage <span className="text-primary">IIITA Clubs</span>
+          </h1>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-12">
+            Connect with the vibrant community of clubs and activities at IIITA. Join clubs, participate in
+            events, and make the most of your campus experience.
+          </p>
+          <div className="flex flex-wrap justify-center gap-5">
+            <Link to="/register">
+              <button className="bg-primary text-white px-8 py-3 rounded-md flex items-center gap-2 hover:bg-primary/90 transition-colors">
+                Get Started <ArrowRight size={18} />
+              </button>
+            </Link>
+            <Link to="/clubs">
+              <button className="bg-white text-primary border border-primary px-8 py-3 rounded-md hover:bg-gray-50 transition-colors">
+                Explore Clubs
+              </button>
+            </Link>
           </div>
         </div>
       </section>
       
       {/* Featured Clubs Section */}
-      <section className="py-12 px-4 bg-gray-50">
+      <section className="py-12 px-4 bg-white">
         <div className="container mx-auto max-w-6xl">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold">Featured Clubs</h2>
-            <Link to="/clubs" className="flex items-center text-primary hover:text-secondary transition-colors">
+            <Link to="/clubs" className="flex items-center text-primary hover:text-primary/80 transition-colors">
               View All <ChevronRight className="h-5 w-5" />
             </Link>
           </div>
@@ -107,11 +95,11 @@ const Index = () => {
       </section>
       
       {/* Upcoming Events Section */}
-      <section className="py-12 px-4">
+      <section className="py-12 px-4 bg-gray-50">
         <div className="container mx-auto max-w-6xl">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold">Upcoming Events</h2>
-            <Link to="/events" className="flex items-center text-primary hover:text-secondary transition-colors">
+            <Link to="/events" className="flex items-center text-primary hover:text-primary/80 transition-colors">
               View All <ChevronRight className="h-5 w-5" />
             </Link>
           </div>
@@ -132,7 +120,7 @@ const Index = () => {
       </section>
       
       {/* Join Now CTA */}
-      <section className="py-16 px-4 bg-accent text-white">
+      <section className="py-16 px-4 bg-primary text-white">
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Join?</h2>
           <p className="text-lg md:text-xl opacity-90 mb-8 max-w-2xl mx-auto">
@@ -141,7 +129,7 @@ const Index = () => {
           <div className="flex flex-wrap justify-center gap-4">
             <Link 
               to="/register" 
-              className="bg-white text-accent font-medium px-8 py-3 rounded-md hover:bg-gray-100 transition-colors"
+              className="bg-white text-primary font-medium px-8 py-3 rounded-md hover:bg-gray-100 transition-colors"
             >
               Sign Up
             </Link>

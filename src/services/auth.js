@@ -47,16 +47,24 @@ export const sendVerificationOTP = (email) => {
   }
   
   // Generate and store OTP
-  generateOTP(email);
+  const otp = generateOTP(email);
   
   return { 
     success: true, 
-    message: 'OTP has been sent to your email' 
+    message: 'OTP has been sent to your email',
+    otp: otp // For demo purposes only - in a real app, this would be sent via email
   };
 };
 
 export const login = (email, password) => {
   const user = users.find(u => u.email === email);
+  
+  if (!email || !email.endsWith('@iiita.ac.in')) {
+    return { 
+      success: false, 
+      message: 'Please use a valid IIITA email address' 
+    };
+  }
   
   if (!user) {
     return { success: false, message: 'User not found' };

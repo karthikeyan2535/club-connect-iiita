@@ -19,37 +19,56 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="bg-primary text-primary-foreground py-2 px-4 flex justify-end">
-        {!userRole ? (
-          <>
-            <Link to="/login" className="mr-4">
-              <Button variant="ghost" className="text-primary-foreground hover:text-primary-foreground/90 flex items-center gap-1">
-                <LogIn size={16} />
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button variant="outline" className="bg-transparent text-primary-foreground border-primary-foreground hover:bg-primary-foreground hover:text-primary flex items-center gap-1">
-                <UserPlus size={16} />
-                Register
-              </Button>
-            </Link>
-          </>
-        ) : (
-          <Button 
-            variant="ghost" 
-            className="text-primary-foreground hover:text-primary-foreground/90"
-            onClick={() => {
-              localStorage.removeItem('user');
-              localStorage.removeItem('userRole');
-              window.location.href = '/';
-            }}
-          >
-            Sign Out
-          </Button>
-        )}
+      <div className="bg-primary py-3 px-6 flex items-center justify-between">
+        <Link to="/" className="text-2xl font-bold text-primary-foreground flex items-center">
+          <span className="text-[#1e40af] bg-white px-2 py-1 rounded mr-2">IIITA</span> 
+          <span className="text-white">ClubHub</span>
+        </Link>
+        
+        <div className="hidden md:flex items-center space-x-8">
+          <Link to="/" className="text-white hover:text-white/80">
+            Home
+          </Link>
+          <Link to="/clubs" className="text-white hover:text-white/80">
+            Clubs
+          </Link>
+          <Link to="/events" className="text-white hover:text-white/80">
+            Events
+          </Link>
+          <Link to="/about" className="text-white hover:text-white/80">
+            About
+          </Link>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          {!userRole ? (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" className="text-white hover:text-white/80">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="outline" className="bg-white text-primary hover:bg-white/90">
+                  Register
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Button 
+              variant="ghost" 
+              className="text-white hover:text-white/80"
+              onClick={() => {
+                localStorage.removeItem('user');
+                localStorage.removeItem('userRole');
+                window.location.href = '/';
+              }}
+            >
+              Sign Out
+            </Button>
+          )}
+        </div>
       </div>
-      <Navbar userRole={userRole} />
       <main className="flex-grow">
         {children}
       </main>
