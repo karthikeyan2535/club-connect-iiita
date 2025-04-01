@@ -17,16 +17,36 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    email: '',
+    password: ''
+  });
+
+  const validateForm = () => {
+    let valid = true;
+    const newErrors = { email: '', password: '' };
+    
+    if (!email) {
+      newErrors.email = 'Email is required';
+      valid = false;
+    } else if (!email.endsWith('@iiita.ac.in')) {
+      newErrors.email = 'Please use a valid IIITA email address';
+      valid = false;
+    }
+    
+    if (!password) {
+      newErrors.password = 'Password is required';
+      valid = false;
+    }
+    
+    setErrors(newErrors);
+    return valid;
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast({
-        title: "Missing fields",
-        description: "Please enter your email and password",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
     
@@ -64,6 +84,7 @@ const Login = () => {
         description: "Failed to login. Please try again.",
         variant: "destructive",
       });
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -103,10 +124,16 @@ const Login = () => {
                   type="email"
                   placeholder="you@iiita.ac.in"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors({...errors, email: ''});
+                  }}
+                  className={`w-full ${errors.email ? 'border-red-500' : ''}`}
                   required
                 />
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                )}
               </div>
               
               <div>
@@ -123,10 +150,16 @@ const Login = () => {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors({...errors, password: ''});
+                  }}
+                  className={`w-full ${errors.password ? 'border-red-500' : ''}`}
                   required
                 />
+                {errors.password && (
+                  <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+                )}
               </div>
               
               <Button

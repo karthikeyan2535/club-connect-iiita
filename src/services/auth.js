@@ -8,13 +8,18 @@ const users = [
   { id: 2, email: 'organizer@iiita.ac.in', password: 'password123', role: 'organizer', name: 'Jane Smith' }
 ];
 
-// Mock OTP storage
+// Mock OTP storage with expiration
 const otpStore = {};
 
 const generateOTP = (email) => {
   // Generate a 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[email] = otp;
+  
+  // Store OTP with expiration (10 minutes)
+  otpStore[email] = {
+    code: otp,
+    expiry: Date.now() + 10 * 60 * 1000
+  };
   
   console.log(`OTP for ${email}: ${otp}`); // In a real app, this would be sent via email
   
@@ -28,7 +33,12 @@ const verifyOTP = (email, otpInput) => {
     return { success: false, message: 'OTP expired or invalid' };
   }
   
-  if (storedOTP === otpInput) {
+  if (Date.now() > storedOTP.expiry) {
+    delete otpStore[email];
+    return { success: false, message: 'OTP has expired' };
+  }
+  
+  if (storedOTP.code === otpInput) {
     // Clear the OTP after successful verification
     delete otpStore[email];
     return { success: true, message: 'OTP verified successfully' };
@@ -39,7 +49,14 @@ const verifyOTP = (email, otpInput) => {
 
 export const sendVerificationOTP = (email) => {
   // Check if email exists and is valid
-  if (!email || !email.endsWith('@iiita.ac.in')) {
+  if (!email) {
+    return { 
+      success: false, 
+      message: 'Email is required' 
+    };
+  }
+  
+  if (!email.endsWith('@iiita.ac.in')) {
     return { 
       success: false, 
       message: 'Please use a valid IIITA email address' 
@@ -57,14 +74,21 @@ export const sendVerificationOTP = (email) => {
 };
 
 export const login = (email, password) => {
-  const user = users.find(u => u.email === email);
+  if (!email || !password) {
+    return { 
+      success: false, 
+      message: 'Email and password are required' 
+    };
+  }
   
-  if (!email || !email.endsWith('@iiita.ac.in')) {
+  if (!email.endsWith('@iiita.ac.in')) {
     return { 
       success: false, 
       message: 'Please use a valid IIITA email address' 
     };
   }
+  
+  const user = users.find(u => u.email === email);
   
   if (!user) {
     return { success: false, message: 'User not found' };
@@ -89,6 +113,22 @@ export const verifyEmailOTP = (email, otp) => {
 };
 
 export const register = (email, password, name, role) => {
+  // Check required fields
+  if (!email || !password || !name || !role) {
+    return { 
+      success: false, 
+      message: 'All fields are required' 
+    };
+  }
+  
+  // Validate email format
+  if (!email.endsWith('@iiita.ac.in')) {
+    return { 
+      success: false, 
+      message: 'Please use a valid IIITA email address' 
+    };
+  }
+  
   // Check if email exists
   const userExists = users.find(u => u.email === email);
   

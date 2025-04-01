@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import MainLayout from '../../components/layout/MainLayout';
@@ -24,11 +24,27 @@ const Register = () => {
   const [otpVerified, setOtpVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [otpResendTime, setOtpResendTime] = useState(0);
+
+  // Handle OTP resend timer
+  useEffect(() => {
+    let timer;
+    if (otpSent && otpResendTime > 0) {
+      timer = setTimeout(() => {
+        setOtpResendTime(prevTime => prevTime - 1);
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [otpSent, otpResendTime]);
+
+  const validateEmail = (email) => {
+    return email && email.endsWith('@iiita.ac.in');
+  };
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
     
-    if (!email || !email.endsWith('@iiita.ac.in')) {
+    if (!validateEmail(email)) {
       toast({
         title: "Invalid email",
         description: "Please enter a valid IIITA email address",
@@ -48,6 +64,7 @@ const Register = () => {
           description: response.message,
         });
         setOtpSent(true);
+        setOtpResendTime(60); // Set resend timer to 60 seconds
       } else {
         toast({
           title: "Error",
@@ -67,6 +84,15 @@ const Register = () => {
   };
 
   const handleVerifyOTP = async (otp) => {
+    if (!otp || otp.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the complete 6-digit OTP",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -147,7 +173,7 @@ const Register = () => {
         
         toast({
           title: "Registration successful",
-          description: `Welcome to IIITA Club Connect, ${response.user.name}!`,
+          description: `Welcome to IIITA ClubHub, ${response.user.name}!`,
         });
         
         // Redirect based on user role
@@ -231,7 +257,7 @@ const Register = () => {
               // Step 2: Enter OTP
               <div className="space-y-6">
                 <p className="text-center text-gray-600">
-                  Enter the 6-digit code sent to {email}
+                  Enter the 6-digit code sent to <span className="font-medium">{email}</span>
                 </p>
                 
                 <div className="mb-6 py-4">
@@ -243,17 +269,27 @@ const Register = () => {
                     onClick={() => setOtpSent(false)}
                     className="text-primary hover:underline"
                     disabled={isLoading}
+                    type="button"
                   >
                     Change email
                   </button>
                   <span>|</span>
-                  <button
-                    onClick={() => handleSendOTP({ preventDefault: () => {} })}
-                    className="text-primary hover:underline"
-                    disabled={isLoading}
-                  >
-                    Resend OTP
-                  </button>
+                  {otpResendTime > 0 ? (
+                    <span className="text-gray-500">
+                      Resend OTP in {otpResendTime}s
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleSendOTP({ preventDefault: () => {} });
+                      }}
+                      className="text-primary hover:underline"
+                      disabled={isLoading}
+                      type="button"
+                    >
+                      Resend OTP
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

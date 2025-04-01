@@ -10,12 +10,34 @@ const MainLayout = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   
   useEffect(() => {
-    // Check if user is logged in
+    // Check if user is logged in on component mount
     const storedUserRole = localStorage.getItem('userRole');
     if (storedUserRole) {
       setUserRole(storedUserRole);
     }
+    
+    // Add an event listener to detect changes to localStorage
+    const handleStorageChange = () => {
+      const updatedUserRole = localStorage.getItem('userRole');
+      setUserRole(updatedUserRole || null);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
+
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    setUserRole(null);
+    
+    // Force page reload to update all components
+    window.location.href = '/';
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -44,12 +66,14 @@ const MainLayout = ({ children }) => {
           {!userRole ? (
             <>
               <Link to="/login">
-                <Button variant="ghost" className="text-white hover:text-white/80">
+                <Button variant="ghost" className="text-white hover:text-white/80 flex items-center gap-2">
+                  <LogIn size={18} />
                   Log in
                 </Button>
               </Link>
               <Link to="/register">
-                <Button variant="outline" className="bg-white text-primary hover:bg-white/90">
+                <Button variant="outline" className="bg-white text-primary hover:bg-white/90 flex items-center gap-2">
+                  <UserPlus size={18} />
                   Register
                 </Button>
               </Link>
@@ -58,17 +82,14 @@ const MainLayout = ({ children }) => {
             <Button 
               variant="ghost" 
               className="text-white hover:text-white/80"
-              onClick={() => {
-                localStorage.removeItem('user');
-                localStorage.removeItem('userRole');
-                window.location.href = '/';
-              }}
+              onClick={handleLogout}
             >
               Sign Out
             </Button>
           )}
         </div>
       </div>
+      <Navbar userRole={userRole} />
       <main className="flex-grow">
         {children}
       </main>
