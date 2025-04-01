@@ -46,17 +46,6 @@ export const sendVerificationOTP = (email) => {
     };
   }
   
-  const user = users.find(u => u.email === email);
-  if (!user) {
-    // In a real app, you might want to handle this differently
-    // Here we're allowing unregistered users to request OTP for signup
-    generateOTP(email);
-    return { 
-      success: true, 
-      message: 'If this email exists, an OTP has been sent' 
-    };
-  }
-  
   // Generate and store OTP
   generateOTP(email);
   

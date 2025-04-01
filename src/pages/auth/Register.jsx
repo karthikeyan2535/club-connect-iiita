@@ -4,6 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import MainLayout from '../../components/layout/MainLayout';
 import OTPInput from '../../components/auth/OTPInput';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
+import { Checkbox } from '../../components/ui/checkbox';
 import { sendVerificationOTP, verifyEmailOTP, register } from '../../services/auth';
 
 const Register = () => {
@@ -18,6 +23,7 @@ const Register = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -120,6 +126,15 @@ const Register = () => {
       return;
     }
     
+    if (!agreedToTerms) {
+      toast({
+        title: "Terms and Conditions",
+        description: "Please agree to the terms and conditions",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -163,26 +178,40 @@ const Register = () => {
     <MainLayout>
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="py-4 px-6 bg-primary text-primary-foreground text-center">
-            <h2 className="text-2xl font-bold">Register</h2>
-            <p className="text-sm">Create your IIITA Club Connect account</p>
-          </div>
-          
           <div className="p-6">
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-bold">Create an account</h2>
+              <p className="text-gray-600 mt-2">Join the IIITA clubs platform</p>
+            </div>
+            
             {!otpSent ? (
-              // Step 1: Enter Email
-              <form onSubmit={handleSendOTP}>
-                <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <input
+              // Step 1: Enter Email and Account Type
+              <form onSubmit={handleSendOTP} className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Account Type</h3>
+                  <RadioGroup defaultValue="student" value={role} onValueChange={setRole} className="flex space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="student" id="r-student" />
+                      <Label htmlFor="r-student" className="cursor-pointer">Student</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="organizer" id="r-organizer" />
+                      <Label htmlFor="r-organizer" className="cursor-pointer">Club Organizer</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                <div>
+                  <Label htmlFor="email" className="text-lg font-medium block mb-2">
+                    Email
+                  </Label>
+                  <Input
                     id="email"
                     type="email"
-                    placeholder="your.name@iiita.ac.in"
+                    placeholder="you@iiita.ac.in"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full"
                     required
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -190,54 +219,26 @@ const Register = () => {
                   </p>
                 </div>
                 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Type
-                  </label>
-                  <div className="flex space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="student"
-                        checked={role === 'student'}
-                        onChange={() => setRole('student')}
-                        className="mr-1"
-                      />
-                      <span>Student</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        value="organizer"
-                        checked={role === 'organizer'}
-                        onChange={() => setRole('organizer')}
-                        className="mr-1"
-                      />
-                      <span>Club Organizer</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <button
+                <Button
                   type="submit"
+                  className="w-full py-6 text-lg"
                   disabled={isLoading}
-                  className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
-                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
-                </button>
+                  {isLoading ? 'Sending OTP...' : 'Continue with Email'}
+                </Button>
               </form>
             ) : !otpVerified ? (
               // Step 2: Enter OTP
-              <div>
-                <p className="text-sm text-gray-600 mb-4 text-center">
-                  Enter the OTP sent to {email}
+              <div className="space-y-6">
+                <p className="text-center text-gray-600">
+                  Enter the 6-digit code sent to {email}
                 </p>
                 
-                <div className="mb-6">
+                <div className="mb-6 py-4">
                   <OTPInput length={6} onComplete={handleVerifyOTP} />
                 </div>
                 
-                <div className="text-sm text-center">
+                <div className="text-sm text-center space-x-3">
                   <button
                     onClick={() => setOtpSent(false)}
                     className="text-primary hover:underline"
@@ -245,7 +246,7 @@ const Register = () => {
                   >
                     Change email
                   </button>
-                  {' | '}
+                  <span>|</span>
                   <button
                     onClick={() => handleSendOTP({ preventDefault: () => {} })}
                     className="text-primary hover:underline"
@@ -257,33 +258,33 @@ const Register = () => {
               </div>
             ) : (
               // Step 3: Complete Registration
-              <form onSubmit={handleRegister}>
-                <div className="mb-4">
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <form onSubmit={handleRegister} className="space-y-6">
+                <div>
+                  <Label htmlFor="name" className="text-lg font-medium block mb-2">
                     Full Name
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="name"
                     type="text"
                     placeholder="Enter your full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full"
                     required
                   />
                 </div>
                 
-                <div className="mb-4">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <div>
+                  <Label htmlFor="reg-password" className="text-lg font-medium block mb-2">
                     Password
-                  </label>
-                  <input
-                    id="password"
+                  </Label>
+                  <Input
+                    id="reg-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full"
                     required
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -291,36 +292,50 @@ const Register = () => {
                   </p>
                 </div>
                 
-                <div className="mb-6">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <div>
+                  <Label htmlFor="confirmPassword" className="text-lg font-medium block mb-2">
                     Confirm Password
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Confirm your password"
+                    placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full"
                     required
                   />
                 </div>
                 
-                <button
+                <div className="flex items-start space-x-2">
+                  <Checkbox 
+                    id="terms" 
+                    checked={agreedToTerms}
+                    onCheckedChange={setAgreedToTerms}
+                  />
+                  <Label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
+                    I agree to the{" "}
+                    <Link to="/terms" className="text-primary hover:underline">
+                      terms and conditions
+                    </Link>
+                  </Label>
+                </div>
+                
+                <Button
                   type="submit"
+                  className="w-full py-6 text-lg"
                   disabled={isLoading}
-                  className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   {isLoading ? 'Creating Account...' : 'Create Account'}
-                </button>
+                </Button>
               </form>
             )}
             
-            <div className="mt-6 text-sm text-center">
-              <p>
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
                 Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline">
-                  Login here
+                <Link to="/login" className="text-primary hover:underline font-medium">
+                  Sign in
                 </Link>
               </p>
             </div>
