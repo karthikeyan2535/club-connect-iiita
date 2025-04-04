@@ -18,7 +18,14 @@ import EventDetails from "./pages/events/EventDetails";
 import StudentDashboard from "./pages/student/Dashboard";
 import OrganizerDashboard from "./pages/organizer/Dashboard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Protected Route component
 const ProtectedRoute = ({ children, allowedRole }: { children: JSX.Element, allowedRole: string }) => {
@@ -33,6 +40,8 @@ const ProtectedRoute = ({ children, allowedRole }: { children: JSX.Element, allo
       
       const authenticated = !!storedUser && !!storedUserRole;
       const correctRole = storedUserRole === allowedRole;
+      
+      console.log("Auth check:", { authenticated, correctRole, storedUserRole, allowedRole });
       
       setIsAuthenticated(authenticated);
       setHasCorrectRole(correctRole);
@@ -59,10 +68,12 @@ const ProtectedRoute = ({ children, allowedRole }: { children: JSX.Element, allo
   }
   
   if (!isAuthenticated) {
+    console.log("Not authenticated, redirecting to login");
     return <Navigate to="/login" />;
   }
   
   if (!hasCorrectRole) {
+    console.log("Wrong role, redirecting to home");
     return <Navigate to="/" />;
   }
   

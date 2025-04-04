@@ -89,7 +89,7 @@ const OTPInput = ({ length = 6, onComplete }) => {
           value={digit}
           onChange={(e) => handleChange(e, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
-          onPaste={handlePaste}
+          onPaste={index === 0 ? handlePaste : null}
           onClick={() => handleFocus(index)}
           maxLength={1}
           className="w-12 h-12 text-2xl border border-gray-300 rounded-md text-center focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"

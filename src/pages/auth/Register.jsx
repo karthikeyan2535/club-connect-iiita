@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import MainLayout from '../../components/layout/MainLayout';
 import OTPInput from '../../components/auth/OTPInput';
 import { Button } from '../../components/ui/button';
@@ -9,6 +10,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Checkbox } from '../../components/ui/checkbox';
+import { Eye, EyeOff, User, Check, X } from 'lucide-react';
 import { sendVerificationOTP, verifyEmailOTP, register } from '../../services/auth';
 
 const Register = () => {
@@ -19,12 +21,15 @@ const Register = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('student');
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otpResendTime, setOtpResendTime] = useState(0);
+  const [otpValue, setOtpValue] = useState('');
 
   // Handle OTP resend timer
   useEffect(() => {
@@ -36,6 +41,19 @@ const Register = () => {
     }
     return () => clearTimeout(timer);
   }, [otpSent, otpResendTime]);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userRole = localStorage.getItem('userRole');
+      if (userRole === 'student') {
+        navigate('/student/dashboard');
+      } else {
+        navigate('/organizer/dashboard');
+      }
+    }
+  }, [navigate]);
 
   const validateEmail = (email) => {
     return email && email.endsWith('@iiita.ac.in');
@@ -63,21 +81,30 @@ const Register = () => {
           title: "OTP Sent",
           description: response.message,
         });
+        sonnerToast.success("OTP sent successfully!");
         setOtpSent(true);
         setOtpResendTime(60); // Set resend timer to 60 seconds
+        
+        // For demo purposes only - this would be removed in production
+        if (response.otp) {
+          console.log("Demo OTP:", response.otp);
+        }
       } else {
         toast({
           title: "Error",
           description: response.message,
           variant: "destructive",
         });
+        sonnerToast.error(response.message);
       }
     } catch (error) {
+      console.error("Error sending OTP:", error);
       toast({
         title: "Error",
         description: "Failed to send OTP. Please try again.",
         variant: "destructive",
       });
+      sonnerToast.error("Failed to send OTP");
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +120,7 @@ const Register = () => {
       return;
     }
 
+    setOtpValue(otp);
     setIsLoading(true);
     
     try {
@@ -103,6 +131,7 @@ const Register = () => {
           title: "Success",
           description: "Email verified successfully",
         });
+        sonnerToast.success("Email verified successfully!");
         setOtpVerified(true);
       } else {
         toast({
@@ -110,13 +139,16 @@ const Register = () => {
           description: response.message,
           variant: "destructive",
         });
+        sonnerToast.error(response.message);
       }
     } catch (error) {
+      console.error("Error verifying OTP:", error);
       toast({
         title: "Error",
         description: "Failed to verify OTP. Please try again.",
         variant: "destructive",
       });
+      sonnerToast.error("Failed to verify OTP");
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +208,8 @@ const Register = () => {
           description: `Welcome to IIITA ClubHub, ${response.user.name}!`,
         });
         
+        sonnerToast.success(`Welcome to IIITA ClubHub, ${response.user.name}!`);
+        
         // Redirect based on user role
         if (response.user.role === 'organizer') {
           navigate('/organizer/dashboard');
@@ -188,21 +222,32 @@ const Register = () => {
           description: response.message,
           variant: "destructive",
         });
+        sonnerToast.error(response.message);
       }
     } catch (error) {
+      console.error("Error during registration:", error);
       toast({
         title: "Error",
         description: "Failed to register. Please try again.",
         variant: "destructive",
       });
+      sonnerToast.error("Registration failed");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
             <div className="text-center mb-6">
@@ -231,15 +276,18 @@ const Register = () => {
                   <Label htmlFor="email" className="text-lg font-medium block mb-2">
                     Email
                   </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@iiita.ac.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@iiita.ac.in"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10"
+                      required
+                    />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  </div>
                   <p className="mt-1 text-xs text-gray-500">
                     Must be a valid IIITA email address
                   </p>
@@ -299,30 +347,43 @@ const Register = () => {
                   <Label htmlFor="name" className="text-lg font-medium block mb-2">
                     Full Name
                   </Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-10"
+                      required
+                    />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  </div>
                 </div>
                 
                 <div>
                   <Label htmlFor="reg-password" className="text-lg font-medium block mb-2">
                     Password
                   </Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="reg-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   <p className="mt-1 text-xs text-gray-500">
                     Must be at least 8 characters long
                   </p>
@@ -332,15 +393,42 @@ const Register = () => {
                   <Label htmlFor="confirmPassword" className="text-lg font-medium block mb-2">
                     Confirm Password
                   </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleConfirmPasswordVisibility}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  
+                  {/* Password match indicator */}
+                  {confirmPassword && (
+                    <div className="mt-1 flex items-center">
+                      {password === confirmPassword ? (
+                        <>
+                          <Check size={16} className="text-green-500 mr-1" />
+                          <span className="text-xs text-green-500">Passwords match</span>
+                        </>
+                      ) : (
+                        <>
+                          <X size={16} className="text-red-500 mr-1" />
+                          <span className="text-xs text-red-500">Passwords do not match</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex items-start space-x-2">
