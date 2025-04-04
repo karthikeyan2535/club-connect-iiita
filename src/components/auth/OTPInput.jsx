@@ -27,7 +27,8 @@ const OTPInput = ({ length = 6, onComplete }) => {
 
     // Check if all inputs are filled
     const filledOtp = newOtp.join('');
-    if (filledOtp.length === length && !filledOtp.includes('')) {
+    if (filledOtp.length === length && !newOtp.includes('')) {
+      console.log("OTP completed:", filledOtp);
       onComplete(filledOtp);
     }
   };
@@ -68,6 +69,7 @@ const OTPInput = ({ length = 6, onComplete }) => {
     // Check if complete
     if (pastedData.length >= length) {
       const otpValue = newOtp.join('');
+      console.log("OTP completed (paste):", otpValue);
       onComplete(otpValue);
     }
   };

@@ -180,3 +180,24 @@ export const register = (email, password, name, role) => {
 export const getUserByEmail = (email) => {
   return users.find(u => u.email === email);
 };
+
+// Reset password functionality
+export const resetPassword = (email, newPassword) => {
+  console.log(`Password reset attempt for ${email}`);
+  
+  const user = users.find(u => u.email === email);
+  
+  if (!user) {
+    console.log('User not found');
+    return { success: false, message: 'User not found' };
+  }
+  
+  // Update password
+  user.password = newPassword;
+  console.log('Password updated for:', email);
+  
+  return {
+    success: true,
+    message: 'Password reset successful'
+  };
+};
