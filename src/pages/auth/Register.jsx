@@ -4,14 +4,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import MainLayout from '../../components/layout/MainLayout';
-import OTPInput from '../../components/auth/OTPInput';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Eye, EyeOff, User, Check, X } from 'lucide-react';
-import { sendVerificationOTP, verifyEmailOTP, register } from '../../services/auth';
+import { Eye, EyeOff, User, Mail, Check, X, Loader2 } from 'lucide-react';
+import { register, sendVerificationEmail } from '../../services/auth';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -24,23 +31,10 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('student');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [otpResendTime, setOtpResendTime] = useState(0);
-  const [otpValue, setOtpValue] = useState('');
-
-  // Handle OTP resend timer
-  useEffect(() => {
-    let timer;
-    if (otpSent && otpResendTime > 0) {
-      timer = setTimeout(() => {
-        setOtpResendTime(prevTime => prevTime - 1);
-      }, 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [otpSent, otpResendTime]);
+  const [verificationLink, setVerificationLink] = useState('');
 
   // Check if user is already logged in
   useEffect(() => {
@@ -59,9 +53,10 @@ const Register = () => {
     return email && email.endsWith('@iiita.ac.in');
   };
 
-  const handleSendOTP = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     
+    // Form validation
     if (!validateEmail(email)) {
       toast({
         title: "Invalid email",
@@ -70,92 +65,6 @@ const Register = () => {
       });
       return;
     }
-    
-    setIsLoading(true);
-    
-    try {
-      const response = await sendVerificationOTP(email);
-      
-      if (response.success) {
-        toast({
-          title: "OTP Sent",
-          description: response.message,
-        });
-        sonnerToast.success("OTP sent successfully!");
-        setOtpSent(true);
-        setOtpResendTime(60); // Set resend timer to 60 seconds
-        
-        // For demo purposes only - this would be removed in production
-        if (response.otp) {
-          console.log("Demo OTP:", response.otp);
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: response.message,
-          variant: "destructive",
-        });
-        sonnerToast.error(response.message);
-      }
-    } catch (error) {
-      console.error("Error sending OTP:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send OTP. Please try again.",
-        variant: "destructive",
-      });
-      sonnerToast.error("Failed to send OTP");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (otp) => {
-    if (!otp || otp.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter the complete 6-digit OTP",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setOtpValue(otp);
-    setIsLoading(true);
-    
-    try {
-      const response = await verifyEmailOTP(email, otp);
-      
-      if (response.success) {
-        toast({
-          title: "Success",
-          description: "Email verified successfully",
-        });
-        sonnerToast.success("Email verified successfully!");
-        setOtpVerified(true);
-      } else {
-        toast({
-          title: "Error",
-          description: response.message,
-          variant: "destructive",
-        });
-        sonnerToast.error(response.message);
-      }
-    } catch (error) {
-      console.error("Error verifying OTP:", error);
-      toast({
-        title: "Error",
-        description: "Failed to verify OTP. Please try again.",
-        variant: "destructive",
-      });
-      sonnerToast.error("Failed to verify OTP");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
     
     if (!name || !password || !confirmPassword) {
       toast({
@@ -199,22 +108,18 @@ const Register = () => {
       const response = await register(email, password, name, role);
       
       if (response.success) {
-        // Save user data in localStorage
-        localStorage.setItem('user', JSON.stringify(response.user));
-        localStorage.setItem('userRole', response.user.role);
-        
         toast({
           title: "Registration successful",
-          description: `Welcome to IIITA ClubHub, ${response.user.name}!`,
+          description: "Please check your email to verify your account",
         });
         
-        sonnerToast.success(`Welcome to IIITA ClubHub, ${response.user.name}!`);
+        sonnerToast.success("Registration successful! Please verify your email.");
         
-        // Redirect based on user role
-        if (response.user.role === 'organizer') {
-          navigate('/organizer/dashboard');
-        } else {
-          navigate('/student/dashboard');
+        setRegistrationComplete(true);
+        
+        // For demo purposes - in a production app, this would be hidden
+        if (response.verificationLink) {
+          setVerificationLink(response.verificationLink);
         }
       } else {
         toast({
@@ -236,6 +141,41 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+  
+  const resendVerificationEmail = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await sendVerificationEmail(email);
+      
+      if (response.success) {
+        toast({
+          title: "Email sent",
+          description: "Verification email has been resent",
+        });
+        
+        // For demo purposes - in a production app, this would be hidden
+        if (response.verificationLink) {
+          setVerificationLink(response.verificationLink);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: response.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -248,16 +188,16 @@ const Register = () => {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6">
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold">Create an account</h2>
-              <p className="text-gray-600 mt-2">Join the IIITA clubs platform</p>
-            </div>
-            
-            {!otpSent ? (
-              // Step 1: Enter Email and Account Type
-              <form onSubmit={handleSendOTP} className="space-y-6">
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold">Create an account</CardTitle>
+            <CardDescription>Join the IIITA clubs platform</CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {!registrationComplete ? (
+              // Registration Form
+              <form onSubmit={handleRegister} className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium mb-2">Account Type</h3>
                   <RadioGroup defaultValue="student" value={role} onValueChange={setRole} className="flex space-x-6">
@@ -286,63 +226,13 @@ const Register = () => {
                       className="w-full pl-10"
                       required
                     />
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
                     Must be a valid IIITA email address
                   </p>
                 </div>
                 
-                <Button
-                  type="submit"
-                  className="w-full py-6 text-lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Sending OTP...' : 'Continue with Email'}
-                </Button>
-              </form>
-            ) : !otpVerified ? (
-              // Step 2: Enter OTP
-              <div className="space-y-6">
-                <p className="text-center text-gray-600">
-                  Enter the 6-digit code sent to <span className="font-medium">{email}</span>
-                </p>
-                
-                <div className="mb-6 py-4">
-                  <OTPInput length={6} onComplete={handleVerifyOTP} />
-                </div>
-                
-                <div className="text-sm text-center space-x-3">
-                  <button
-                    onClick={() => setOtpSent(false)}
-                    className="text-primary hover:underline"
-                    disabled={isLoading}
-                    type="button"
-                  >
-                    Change email
-                  </button>
-                  <span>|</span>
-                  {otpResendTime > 0 ? (
-                    <span className="text-gray-500">
-                      Resend OTP in {otpResendTime}s
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        handleSendOTP({ preventDefault: () => {} });
-                      }}
-                      className="text-primary hover:underline"
-                      disabled={isLoading}
-                      type="button"
-                    >
-                      Resend OTP
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              // Step 3: Complete Registration
-              <form onSubmit={handleRegister} className="space-y-6">
                 <div>
                   <Label htmlFor="name" className="text-lg font-medium block mb-2">
                     Full Name
@@ -362,12 +252,12 @@ const Register = () => {
                 </div>
                 
                 <div>
-                  <Label htmlFor="reg-password" className="text-lg font-medium block mb-2">
+                  <Label htmlFor="password" className="text-lg font-medium block mb-2">
                     Password
                   </Label>
                   <div className="relative">
                     <Input
-                      id="reg-password"
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
@@ -450,21 +340,73 @@ const Register = () => {
                   className="w-full py-6 text-lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : 'Create Account'}
                 </Button>
               </form>
+            ) : (
+              // Email Verification Message
+              <div className="space-y-6 text-center">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-8 w-8 text-green-600" />
+                </div>
+                
+                <h3 className="text-xl font-bold">Verify your email</h3>
+                
+                <p className="text-gray-600">
+                  We've sent a verification link to{" "}
+                  <span className="font-medium">{email}</span>
+                </p>
+                
+                <p className="text-sm text-gray-500">
+                  Please check your inbox and click on the verification link to complete your registration.
+                </p>
+                
+                {/* For demo purposes only - in a real app this would be removed */}
+                {verificationLink && (
+                  <div className="border border-dashed border-gray-300 p-4 rounded-md bg-gray-50 text-left">
+                    <p className="text-xs text-gray-500 mb-2 font-medium">Demo: Click the link below to verify</p>
+                    <Link 
+                      to={verificationLink} 
+                      className="text-sm text-primary underline break-all"
+                    >
+                      {verificationLink}
+                    </Link>
+                  </div>
+                )}
+                
+                <div className="pt-4">
+                  <Button
+                    onClick={resendVerificationEmail}
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : 'Resend verification email'}
+                  </Button>
+                </div>
+              </div>
             )}
-            
-            <div className="mt-6 text-center">
-              <p className="text-gray-600">
-                Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  Sign in
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+          
+          <CardFooter>
+            <p className="w-full text-center text-gray-600">
+              Already have an account?{' '}
+              <Link to="/login" className="text-primary hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
       </div>
     </MainLayout>
   );

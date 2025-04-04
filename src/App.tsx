@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 import ClubsPage from "./pages/clubs/ClubsPage";
 import ClubDetails from "./pages/clubs/ClubDetails";
 import EventsPage from "./pages/events/EventsPage";
@@ -94,6 +95,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           
           {/* Club Routes */}
           <Route path="/clubs" element={<ClubsPage />} />

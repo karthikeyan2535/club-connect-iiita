@@ -4,58 +4,30 @@
 
 // Mock database of users
 const users = [
-  { id: 1, email: 'student@iiita.ac.in', password: 'password123', role: 'student', name: 'John Doe' },
-  { id: 2, email: 'organizer@iiita.ac.in', password: 'password123', role: 'organizer', name: 'Jane Smith' }
+  { id: 1, email: 'student@iiita.ac.in', password: 'password123', role: 'student', name: 'John Doe', emailVerified: true },
+  { id: 2, email: 'organizer@iiita.ac.in', password: 'password123', role: 'organizer', name: 'Jane Smith', emailVerified: true }
 ];
 
-// Mock OTP storage with expiration
-const otpStore = {};
+// Mock email verification tokens with expiration
+const emailVerificationTokens = {};
 
-const generateOTP = (email) => {
-  // Generate a 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+const generateEmailVerificationToken = (email) => {
+  // Generate a random token (in a real app, this would be a cryptographically secure token)
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   
-  // Store OTP with expiration (10 minutes)
-  otpStore[email] = {
-    code: otp,
-    expiry: Date.now() + 10 * 60 * 1000
+  // Store token with expiration (24 hours)
+  emailVerificationTokens[email] = {
+    token: token,
+    expiry: Date.now() + 24 * 60 * 60 * 1000
   };
   
-  console.log(`OTP generated for ${email}: ${otp}`); // In a real app, this would be sent via email
+  console.log(`Verification token generated for ${email}: ${token}`); // In a real app, this would be sent via email
   
-  return otp;
+  return token;
 };
 
-const verifyOTP = (email, otpInput) => {
-  console.log(`Verifying OTP for ${email}:`, otpInput);
-  console.log('Current OTP store:', otpStore);
-  
-  const storedOTP = otpStore[email];
-  
-  if (!storedOTP) {
-    console.log('No OTP found for this email');
-    return { success: false, message: 'OTP expired or invalid' };
-  }
-  
-  if (Date.now() > storedOTP.expiry) {
-    console.log('OTP expired');
-    delete otpStore[email];
-    return { success: false, message: 'OTP has expired' };
-  }
-  
-  if (storedOTP.code === otpInput) {
-    // Clear the OTP after successful verification
-    console.log('OTP verified successfully');
-    delete otpStore[email];
-    return { success: true, message: 'OTP verified successfully' };
-  }
-  
-  console.log('Invalid OTP');
-  return { success: false, message: 'Invalid OTP' };
-};
-
-export const sendVerificationOTP = (email) => {
-  console.log(`Sending verification OTP to ${email}`);
+export const sendVerificationEmail = (email) => {
+  console.log(`Sending verification email to ${email}`);
   
   // Check if email exists and is valid
   if (!email) {
@@ -72,14 +44,52 @@ export const sendVerificationOTP = (email) => {
     };
   }
   
-  // Generate and store OTP
-  const otp = generateOTP(email);
+  // Generate and store verification token
+  const token = generateEmailVerificationToken(email);
+  
+  // In a real app, this is where an email would be sent
+  console.log(`Email sent to ${email} with verification link: /verify-email?email=${email}&token=${token}`);
   
   return { 
     success: true, 
-    message: 'OTP has been sent to your email',
-    otp: otp // For demo purposes only - in a real app, this would be sent via email
+    message: 'Verification email has been sent. Please check your inbox.',
+    // For demo purposes - in a real app, this would be sent via email
+    verificationLink: `/verify-email?email=${email}&token=${token}`
   };
+};
+
+export const verifyEmail = (email, token) => {
+  console.log(`Verifying email for ${email} with token: ${token}`);
+  
+  const storedVerification = emailVerificationTokens[email];
+  
+  if (!storedVerification) {
+    console.log('No verification token found for this email');
+    return { success: false, message: 'Invalid or expired verification link' };
+  }
+  
+  if (Date.now() > storedVerification.expiry) {
+    console.log('Verification token expired');
+    delete emailVerificationTokens[email];
+    return { success: false, message: 'Verification link has expired' };
+  }
+  
+  if (storedVerification.token === token) {
+    console.log('Email verified successfully');
+    delete emailVerificationTokens[email];
+    
+    // Find pending user registration and mark email as verified
+    const pendingUser = users.find(u => u.email === email && !u.emailVerified);
+    if (pendingUser) {
+      pendingUser.emailVerified = true;
+      console.log(`Email verified for user: ${pendingUser.name}`);
+    }
+    
+    return { success: true, message: 'Email verified successfully' };
+  }
+  
+  console.log('Invalid verification token');
+  return { success: false, message: 'Invalid verification link' };
 };
 
 export const login = (email, password) => {
@@ -111,6 +121,15 @@ export const login = (email, password) => {
     return { success: false, message: 'Invalid password' };
   }
   
+  if (!user.emailVerified) {
+    console.log('Email not verified');
+    return { 
+      success: false, 
+      message: 'Please verify your email before logging in',
+      pendingVerification: true 
+    };
+  }
+  
   // Don't return password in response
   const { password: _, ...userWithoutPassword } = user;
   
@@ -120,10 +139,6 @@ export const login = (email, password) => {
     message: 'Login successful', 
     user: userWithoutPassword 
   };
-};
-
-export const verifyEmailOTP = (email, otp) => {
-  return verifyOTP(email, otp);
 };
 
 export const register = (email, password, name, role) => {
@@ -153,26 +168,27 @@ export const register = (email, password, name, role) => {
     return { success: false, message: 'User with this email already exists' };
   }
   
-  // Create new user
+  // Create new user (but not verified yet)
   const newUser = {
     id: users.length + 1,
     email,
     password,
     name,
-    role
+    role,
+    emailVerified: false // Email not verified yet
   };
   
   // In a real app, this would be saved to a database
   users.push(newUser);
-  console.log('New user registered:', newUser.email);
+  console.log('New user registered (pending verification):', newUser.email);
   
-  // Don't return password in response
-  const { password: _, ...userWithoutPassword } = newUser;
+  // Generate verification token and "send" verification email
+  const verificationResponse = sendVerificationEmail(email);
   
   return { 
     success: true, 
-    message: 'Registration successful', 
-    user: userWithoutPassword 
+    message: 'Registration successful. Please check your email to verify your account.', 
+    verificationLink: verificationResponse.verificationLink // For demo purposes only
   };
 };
 
@@ -200,4 +216,23 @@ export const resetPassword = (email, newPassword) => {
     success: true,
     message: 'Password reset successful'
   };
+};
+
+// Function for resending verification email
+export const resendVerificationEmail = (email) => {
+  console.log(`Resending verification email to ${email}`);
+  
+  const user = users.find(u => u.email === email);
+  
+  if (!user) {
+    console.log('User not found');
+    return { success: false, message: 'User not found' };
+  }
+  
+  if (user.emailVerified) {
+    console.log('Email already verified');
+    return { success: false, message: 'Email already verified' };
+  }
+  
+  return sendVerificationEmail(email);
 };

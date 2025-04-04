@@ -1,17 +1,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 
-const OTPInput = ({ length = 6, onComplete }) => {
+const OTPInput = ({ length = 6, onComplete, disabled = false }) => {
   const [otp, setOtp] = useState(Array(length).fill(''));
   const inputRefs = useRef([]);
 
   useEffect(() => {
-    if (inputRefs.current[0]) {
+    if (inputRefs.current[0] && !disabled) {
       inputRefs.current[0].focus();
     }
-  }, []);
+  }, [disabled]);
 
   const handleChange = (e, index) => {
+    if (disabled) return;
+    
     const { value } = e.target;
     if (isNaN(value)) return;
 
@@ -34,6 +36,8 @@ const OTPInput = ({ length = 6, onComplete }) => {
   };
 
   const handleKeyDown = (e, index) => {
+    if (disabled) return;
+    
     // Navigate backwards when backspace is pressed and input is empty
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
@@ -49,6 +53,8 @@ const OTPInput = ({ length = 6, onComplete }) => {
   };
 
   const handlePaste = (e) => {
+    if (disabled) return;
+    
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
     
@@ -76,7 +82,9 @@ const OTPInput = ({ length = 6, onComplete }) => {
 
   // Function to focus specific input on click
   const handleFocus = (index) => {
-    inputRefs.current[index].select();
+    if (!disabled) {
+      inputRefs.current[index].select();
+    }
   };
 
   return (
@@ -94,7 +102,8 @@ const OTPInput = ({ length = 6, onComplete }) => {
           onPaste={index === 0 ? handlePaste : null}
           onClick={() => handleFocus(index)}
           maxLength={1}
-          className="w-12 h-12 text-2xl border border-gray-300 rounded-md text-center focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
+          disabled={disabled}
+          className="w-12 h-12 text-2xl border border-gray-300 rounded-md text-center focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 disabled:bg-gray-100 disabled:text-gray-400"
         />
       ))}
     </div>
