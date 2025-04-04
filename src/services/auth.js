@@ -21,33 +21,42 @@ const generateOTP = (email) => {
     expiry: Date.now() + 10 * 60 * 1000
   };
   
-  console.log(`OTP for ${email}: ${otp}`); // In a real app, this would be sent via email
+  console.log(`OTP generated for ${email}: ${otp}`); // In a real app, this would be sent via email
   
   return otp;
 };
 
 const verifyOTP = (email, otpInput) => {
+  console.log(`Verifying OTP for ${email}:`, otpInput);
+  console.log('Current OTP store:', otpStore);
+  
   const storedOTP = otpStore[email];
   
   if (!storedOTP) {
+    console.log('No OTP found for this email');
     return { success: false, message: 'OTP expired or invalid' };
   }
   
   if (Date.now() > storedOTP.expiry) {
+    console.log('OTP expired');
     delete otpStore[email];
     return { success: false, message: 'OTP has expired' };
   }
   
   if (storedOTP.code === otpInput) {
     // Clear the OTP after successful verification
+    console.log('OTP verified successfully');
     delete otpStore[email];
     return { success: true, message: 'OTP verified successfully' };
   }
   
+  console.log('Invalid OTP');
   return { success: false, message: 'Invalid OTP' };
 };
 
 export const sendVerificationOTP = (email) => {
+  console.log(`Sending verification OTP to ${email}`);
+  
   // Check if email exists and is valid
   if (!email) {
     return { 
@@ -74,6 +83,8 @@ export const sendVerificationOTP = (email) => {
 };
 
 export const login = (email, password) => {
+  console.log(`Login attempt for ${email}`);
+  
   if (!email || !password) {
     return { 
       success: false, 
@@ -91,16 +102,19 @@ export const login = (email, password) => {
   const user = users.find(u => u.email === email);
   
   if (!user) {
+    console.log('User not found');
     return { success: false, message: 'User not found' };
   }
   
   if (user.password !== password) {
+    console.log('Invalid password');
     return { success: false, message: 'Invalid password' };
   }
   
   // Don't return password in response
   const { password: _, ...userWithoutPassword } = user;
   
+  console.log('Login successful for', userWithoutPassword.name);
   return { 
     success: true, 
     message: 'Login successful', 
@@ -113,6 +127,8 @@ export const verifyEmailOTP = (email, otp) => {
 };
 
 export const register = (email, password, name, role) => {
+  console.log(`Registration attempt for ${email} as ${role}`);
+  
   // Check required fields
   if (!email || !password || !name || !role) {
     return { 
@@ -133,6 +149,7 @@ export const register = (email, password, name, role) => {
   const userExists = users.find(u => u.email === email);
   
   if (userExists) {
+    console.log('User already exists');
     return { success: false, message: 'User with this email already exists' };
   }
   
@@ -147,6 +164,7 @@ export const register = (email, password, name, role) => {
   
   // In a real app, this would be saved to a database
   users.push(newUser);
+  console.log('New user registered:', newUser.email);
   
   // Don't return password in response
   const { password: _, ...userWithoutPassword } = newUser;
@@ -156,4 +174,9 @@ export const register = (email, password, name, role) => {
     message: 'Registration successful', 
     user: userWithoutPassword 
   };
+};
+
+// Helper function to check if user exists (for development/demo)
+export const getUserByEmail = (email) => {
+  return users.find(u => u.email === email);
 };

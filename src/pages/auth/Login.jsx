@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import MainLayout from '../../components/layout/MainLayout';
@@ -21,6 +21,17 @@ const Login = () => {
     email: '',
     password: ''
   });
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedUserRole = localStorage.getItem('userRole');
+    
+    if (storedUser && storedUserRole) {
+      // User is already logged in, redirect to dashboard
+      navigate(`/${storedUserRole}/dashboard`);
+    }
+  }, [navigate]);
 
   const validateForm = () => {
     let valid = true;
@@ -45,8 +56,10 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    console.log("Login form submitted");
     
     if (!validateForm()) {
+      console.log("Form validation failed");
       return;
     }
     
@@ -54,11 +67,15 @@ const Login = () => {
     
     try {
       const response = await login(email, password);
+      console.log("Login response:", response);
       
       if (response.success) {
         // Save user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.user));
         localStorage.setItem('userRole', response.user.role);
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event('localStorageChange'));
         
         toast({
           title: "Login successful",
@@ -79,12 +96,12 @@ const Login = () => {
         });
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: "Failed to login. Please try again.",
         variant: "destructive",
       });
-      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }

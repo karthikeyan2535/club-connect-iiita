@@ -10,45 +10,50 @@ import { useToast } from '../../hooks/use-toast';
 const MainLayout = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [user, setUser] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   
   useEffect(() => {
     // Check if user is logged in on component mount
-    const storedUserRole = localStorage.getItem('userRole');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedUserRole) {
-      setUserRole(storedUserRole);
-    }
-    
-    if (storedUser) {
+    const loadUserData = () => {
       try {
-        setUser(JSON.parse(storedUser));
+        const storedUserRole = localStorage.getItem('userRole');
+        const storedUser = localStorage.getItem('user');
+        
+        if (storedUserRole) {
+          setUserRole(storedUserRole);
+        } else {
+          setUserRole(null);
+        }
+        
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (error) {
+            console.error("Error parsing user from localStorage:", error);
+            // Clear corrupted user data
+            localStorage.removeItem('user');
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+        
+        setIsInitialized(true);
       } catch (error) {
-        console.error("Error parsing user from localStorage:", error);
-        // Clear corrupted user data
-        localStorage.removeItem('user');
+        console.error("Error loading user data:", error);
+        setUserRole(null);
+        setUser(null);
+        setIsInitialized(true);
       }
-    }
+    };
+    
+    loadUserData();
     
     // Function to handle storage changes
     const handleStorageChange = () => {
-      const updatedUserRole = localStorage.getItem('userRole');
-      const updatedUser = localStorage.getItem('user');
-      
-      setUserRole(updatedUserRole || null);
-      
-      if (updatedUser) {
-        try {
-          setUser(JSON.parse(updatedUser));
-        } catch (error) {
-          console.error("Error parsing user from localStorage:", error);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
+      loadUserData();
     };
     
     // Listen for storage events (from other tabs)
@@ -64,6 +69,8 @@ const MainLayout = ({ children }) => {
   }, []);
 
   const handleLogout = () => {
+    console.log("Logout initiated");
+    
     // Clear user data from localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
@@ -81,6 +88,19 @@ const MainLayout = ({ children }) => {
     // Redirect to homepage after logout
     navigate('/');
   };
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" role="status">
+            <span className="sr-only">Loading...</span>
+          </div>
+          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

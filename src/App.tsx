@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 // Pages
 import Index from "./pages/Index";
@@ -18,6 +19,55 @@ import StudentDashboard from "./pages/student/Dashboard";
 import OrganizerDashboard from "./pages/organizer/Dashboard";
 
 const queryClient = new QueryClient();
+
+// Protected Route component
+const ProtectedRoute = ({ children, allowedRole }: { children: JSX.Element, allowedRole: string }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCorrectRole, setHasCorrectRole] = useState(false);
+  
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      const storedUserRole = localStorage.getItem('userRole');
+      
+      const authenticated = !!storedUser && !!storedUserRole;
+      const correctRole = storedUserRole === allowedRole;
+      
+      setIsAuthenticated(authenticated);
+      setHasCorrectRole(correctRole);
+    } catch (error) {
+      console.error("Error checking auth:", error);
+      setIsAuthenticated(false);
+      setHasCorrectRole(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [allowedRole]);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" role="status">
+            <span className="sr-only">Loading...</span>
+          </div>
+          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!hasCorrectRole) {
+    return <Navigate to="/" />;
+  }
+  
+  return children;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -41,10 +91,18 @@ const App = () => (
           <Route path="/events/:id" element={<EventDetails />} />
           
           {/* Student Routes */}
-          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/dashboard" element={
+            <ProtectedRoute allowedRole="student">
+              <StudentDashboard />
+            </ProtectedRoute>
+          } />
           
           {/* Organizer Routes */}
-          <Route path="/organizer/dashboard" element={<OrganizerDashboard />} />
+          <Route path="/organizer/dashboard" element={
+            <ProtectedRoute allowedRole="organizer">
+              <OrganizerDashboard />
+            </ProtectedRoute>
+          } />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
