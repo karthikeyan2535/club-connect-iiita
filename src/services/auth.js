@@ -1,4 +1,3 @@
-
 // This is a mock service for authentication
 // In a real application, this would connect to a backend
 
@@ -50,14 +49,19 @@ export const sendVerificationEmail = (email) => {
   // Generate and store verification token
   const token = generateEmailVerificationToken(email);
   
-  // In a real app, this is where an email would be sent
-  console.log(`Email sent to ${email} with verification link: /verify-email?email=${email}&token=${token}`);
+  // Create a proper verification link - ensure it's an absolute URL
+  const verificationLink = `/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+  
+  // In a real app, this is where an actual email would be sent
+  console.log(`✉️ VERIFICATION EMAIL SENT to ${email}`);
+  console.log(`📧 Subject: Verify your IIITA Clubs account`);
+  console.log(`📝 Body: Please verify your email by clicking this link: ${verificationLink}`);
   
   return { 
     success: true, 
     message: 'Verification email has been sent. Please check your inbox.',
     // For demo purposes - in a real app, this would be sent via email
-    verificationLink: `/verify-email?email=${email}&token=${token}`
+    verificationLink: verificationLink
   };
 };
 

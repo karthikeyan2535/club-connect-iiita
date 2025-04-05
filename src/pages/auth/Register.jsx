@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
@@ -117,9 +116,10 @@ const Register = () => {
         
         setRegistrationComplete(true);
         
-        // For demo purposes - in a production app, this would be hidden
+        // For demo purposes - in a real app, this would be hidden
         if (response.verificationLink) {
           setVerificationLink(response.verificationLink);
+          console.log(`✉️ DEMO: Verification link for ${email}: ${response.verificationLink}`);
         }
       } else {
         toast({
@@ -154,9 +154,12 @@ const Register = () => {
           description: "Verification email has been resent",
         });
         
-        // For demo purposes - in a production app, this would be hidden
+        sonnerToast.success("Verification email sent. Please check your inbox.");
+        
+        // For demo purposes - in a real app, this would be hidden
         if (response.verificationLink) {
           setVerificationLink(response.verificationLink);
+          console.log(`✉️ DEMO: Resent verification link for ${email}: ${response.verificationLink}`);
         }
       } else {
         toast({
@@ -164,6 +167,7 @@ const Register = () => {
           description: response.message,
           variant: "destructive",
         });
+        sonnerToast.error(response.message);
       }
     } catch (error) {
       console.error("Error sending verification email:", error);
@@ -172,6 +176,7 @@ const Register = () => {
         description: "Failed to send verification email. Please try again.",
         variant: "destructive",
       });
+      sonnerToast.error("Failed to send verification email");
     } finally {
       setIsLoading(false);
     }

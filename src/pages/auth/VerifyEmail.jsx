@@ -35,9 +35,12 @@ const VerifyEmail = () => {
         setErrorMessage('Invalid verification link');
         return;
       }
+      
+      console.log(`Attempting to verify email: ${email} with token: ${token}`);
 
       try {
         const response = await verifyEmail(email, token);
+        console.log("Verification response:", response);
         
         if (response.success) {
           setStatus('success');
