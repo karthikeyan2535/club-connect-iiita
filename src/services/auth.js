@@ -11,6 +11,9 @@ const users = [
 // Mock email verification tokens with expiration
 const emailVerificationTokens = {};
 
+// Mock OTP storage
+const otpStore = {};
+
 const generateEmailVerificationToken = (email) => {
   // Generate a random token (in a real app, this would be a cryptographically secure token)
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -235,4 +238,67 @@ export const resendVerificationEmail = (email) => {
   }
   
   return sendVerificationEmail(email);
+};
+
+// New OTP-related functions
+export const sendVerificationOTP = (email) => {
+  console.log(`Sending verification OTP to ${email}`);
+  
+  if (!email) {
+    return { 
+      success: false, 
+      message: 'Email is required' 
+    };
+  }
+  
+  if (!email.endsWith('@iiita.ac.in')) {
+    return { 
+      success: false, 
+      message: 'Please use a valid IIITA email address' 
+    };
+  }
+  
+  // Generate a 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Store OTP with expiration (10 minutes)
+  otpStore[email] = {
+    otp: otp,
+    expiry: Date.now() + 10 * 60 * 1000 // 10 minutes
+  };
+  
+  console.log(`OTP sent to ${email}: ${otp}`); // In a real app, this would be sent via email
+  
+  return { 
+    success: true, 
+    message: 'Verification code has been sent to your email',
+    otp: otp // For demo purposes only - in a real app, this would be sent via email
+  };
+};
+
+export const verifyEmailOTP = (email, otp) => {
+  console.log(`Verifying OTP for ${email}: ${otp}`);
+  
+  const storedOTP = otpStore[email];
+  
+  if (!storedOTP) {
+    console.log('No OTP found for this email');
+    return { success: false, message: 'Invalid or expired verification code' };
+  }
+  
+  if (Date.now() > storedOTP.expiry) {
+    console.log('OTP expired');
+    delete otpStore[email];
+    return { success: false, message: 'Verification code has expired' };
+  }
+  
+  if (storedOTP.otp === otp) {
+    console.log('OTP verified successfully');
+    delete otpStore[email];
+    
+    return { success: true, message: 'Email verified successfully' };
+  }
+  
+  console.log('Invalid OTP');
+  return { success: false, message: 'Invalid verification code' };
 };
