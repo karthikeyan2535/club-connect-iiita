@@ -11,7 +11,7 @@ const Navbar = ({ userRole, user, onLogout }) => {
   const handleLogout = () => {
     setIsOpen(false);
     setShowProfileMenu(false);
-    onLogout();
+    onLogout && onLogout();
   };
 
   const handleNavLinkClick = () => {
@@ -21,6 +21,10 @@ const Navbar = ({ userRole, user, onLogout }) => {
   const toggleProfileMenu = () => {
     setShowProfileMenu(!showProfileMenu);
   };
+
+  // Safe access to user properties with fallbacks
+  const userName = user && user.name ? user.name : 'User';
+  const userEmail = user && user.email ? user.email : '';
 
   return (
     <nav className="bg-primary text-white">
@@ -129,18 +133,22 @@ const Navbar = ({ userRole, user, onLogout }) => {
                   className="flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-foreground/10 focus:outline-none"
                 >
                   <User className="h-5 w-5 mr-2" />
-                  <span className="mr-1">{user.name || 'User'}</span>
+                  <span className="mr-1">{userName}</span>
                   <ChevronDown className="h-4 w-4" />
                 </button>
                 
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-60 bg-white rounded-md shadow-lg z-50">
                     <div className="p-4 border-b border-gray-200">
-                      <div className="font-medium text-gray-800">{user.name || 'User'}</div>
-                      <div className="text-sm text-gray-500 mt-1">{user.email}</div>
-                      <div className="text-xs bg-primary/10 text-primary rounded-full px-2 py-1 inline-block mt-2 capitalize">
-                        {userRole}
-                      </div>
+                      <div className="font-medium text-gray-800">{userName}</div>
+                      {userEmail && (
+                        <div className="text-sm text-gray-500 mt-1">{userEmail}</div>
+                      )}
+                      {userRole && (
+                        <div className="text-xs bg-primary/10 text-primary rounded-full px-2 py-1 inline-block mt-2 capitalize">
+                          {userRole}
+                        </div>
+                      )}
                     </div>
                     <div className="py-1">
                       <Link 

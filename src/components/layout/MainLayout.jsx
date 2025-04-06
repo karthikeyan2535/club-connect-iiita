@@ -29,7 +29,9 @@ const MainLayout = ({ children }) => {
         
         if (storedUser) {
           try {
-            setUser(JSON.parse(storedUser));
+            const parsedUser = JSON.parse(storedUser);
+            console.log("Loaded user data:", parsedUser);
+            setUser(parsedUser);
           } catch (error) {
             console.error("Error parsing user from localStorage:", error);
             // Clear corrupted user data
