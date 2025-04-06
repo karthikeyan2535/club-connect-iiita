@@ -1,19 +1,25 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
 
 const Navbar = ({ userRole, user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     setIsOpen(false);
+    setShowProfileMenu(false);
     onLogout();
   };
 
   const handleNavLinkClick = () => {
     setIsOpen(false);
+  };
+
+  const toggleProfileMenu = () => {
+    setShowProfileMenu(!showProfileMenu);
   };
 
   return (
@@ -115,6 +121,48 @@ const Navbar = ({ userRole, user, onLogout }) => {
       <div className="hidden md:block">
         <div className="container mx-auto">
           <div className="flex items-center justify-between py-4">
+            {/* User Profile Dropdown - Only shown when logged in */}
+            {userRole && user && (
+              <div className="relative ml-auto">
+                <button 
+                  onClick={toggleProfileMenu}
+                  className="flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-foreground/10 focus:outline-none"
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  <span className="mr-1">{user.name || 'User'}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-md shadow-lg z-50">
+                    <div className="p-4 border-b border-gray-200">
+                      <div className="font-medium text-gray-800">{user.name || 'User'}</div>
+                      <div className="text-sm text-gray-500 mt-1">{user.email}</div>
+                      <div className="text-xs bg-primary/10 text-primary rounded-full px-2 py-1 inline-block mt-2 capitalize">
+                        {userRole}
+                      </div>
+                    </div>
+                    <div className="py-1">
+                      <Link 
+                        to={`/${userRole === 'student' ? 'student' : 'organizer'}/dashboard`}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowProfileMenu(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <button 
+                        onClick={handleLogout}
+                        className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Nav links - These are already in MainLayout, so we don't need to duplicate */}
             <div className="flex-1"></div>
           </div>
