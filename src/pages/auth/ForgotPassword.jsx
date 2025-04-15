@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import MainLayout from '../../components/layout/MainLayout';
@@ -9,10 +9,11 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
-import { sendVerificationOTP, verifyEmailOTP } from '../../services/auth';
+import { sendVerificationOTP, verifyEmailOTP, resetPassword } from '../../services/auth';
 
 const ForgotPassword = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -164,21 +165,40 @@ const ForgotPassword = () => {
       return;
     }
     
-    // In a real application, you would send a request to update the password
     setIsLoading(true);
     
-    // Simulate API request
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Success",
-        description: "Your password has been reset successfully",
-      });
-      sonnerToast.success("Password reset successful!");
+    try {
+      // Use the resetPassword service function
+      const response = await resetPassword(email, password);
       
-      // Redirect to login page
-      window.location.href = '/login';
-    }, 1500);
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Your password has been reset successfully",
+        });
+        sonnerToast.success("Password reset successful!");
+        
+        // Redirect to login page
+        navigate('/login');
+      } else {
+        toast({
+          title: "Error",
+          description: response.message,
+          variant: "destructive",
+        });
+        sonnerToast.error(response.message);
+      }
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
+      sonnerToast.error("Failed to reset password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const togglePasswordVisibility = () => {
