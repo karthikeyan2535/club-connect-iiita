@@ -29,10 +29,18 @@ const VerifyEmail = () => {
     const verifyEmailToken = async () => {
       const email = searchParams.get('email');
       const token = searchParams.get('token');
+      const type = searchParams.get('type');
 
-      if (!email || !token) {
+      if (!email) {
         setStatus('error');
-        setErrorMessage('Invalid verification link');
+        setErrorMessage('Invalid verification link - missing email');
+        return;
+      }
+      
+      // Handle the case where token might be missing but we can still show the UI
+      if (!token) {
+        setStatus('error');
+        setErrorMessage('Invalid verification link - missing token');
         return;
       }
       

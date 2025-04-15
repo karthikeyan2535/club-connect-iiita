@@ -51,7 +51,7 @@ const Register = () => {
   const validateEmail = (email) => {
     return email && email.endsWith('@iiita.ac.in');
   };
-
+  
   const handleRegister = async (e) => {
     e.preventDefault();
     
@@ -104,7 +104,9 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting registration with:", { email, name, role });
       const response = await register(email, password, name, role);
+      console.log("Registration response:", response);
       
       if (response.success) {
         toast({
