@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 // Login with email and password
@@ -66,6 +67,12 @@ export const register = async (email, password, name, role) => {
   }
   
   try {
+    // Validate role to ensure it matches our enum type
+    if (!['student', 'organizer', 'admin'].includes(role)) {
+      console.log('Invalid role:', role);
+      return { success: false, message: 'Invalid user role' };
+    }
+    
     // Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email,
