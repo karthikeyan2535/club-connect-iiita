@@ -33,6 +33,8 @@ const VerifyEmail = () => {
       const token = searchParams.get('token');
       const type = searchParams.get('type');
 
+      console.log("Verification parameters:", { email, token, type });
+
       if (!email) {
         setStatus('error');
         setErrorMessage('Invalid verification link - missing email');
