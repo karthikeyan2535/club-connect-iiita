@@ -67,30 +67,47 @@ export const register = async (email, password, name, role) => {
   }
   
   try {
-    // Validate role to ensure it matches our enum type
+    // Validate role string format before sending to supabase
     if (!['student', 'organizer', 'admin'].includes(role)) {
-      console.log('Invalid role:', role);
-      return { success: false, message: 'Invalid user role' };
+      console.log('Invalid role format:', role);
+      return { success: false, message: 'Invalid user role format' };
     }
     
-    // Create the user in Supabase Auth
+    // Create the user in Supabase Auth without raw_user_meta_data
+    // We'll create the profile record separately
     const { data, error } = await supabase.auth.signUp({
       email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-          user_role: role
-        }
-      }
+      password
     });
     
     if (error) {
-      console.log('Registration error:', error.message);
+      console.error('Registration error from Supabase Auth:', error);
       return { success: false, message: error.message };
     }
     
-    console.log('New user registered:', data.user.email);
+    console.log('User created in auth system:', data.user.id);
+    
+    // Now manually insert the profile record
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            id: data.user.id,
+            full_name: name,
+            email: email,
+            user_role: role
+          }
+        ]);
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        // Don't return error here, as the auth user is already created
+        console.log('Profile creation failed, but auth user created');
+      } else {
+        console.log('Profile created successfully');
+      }
+    }
     
     // Check if email confirmation is required
     if (data.session === null) {

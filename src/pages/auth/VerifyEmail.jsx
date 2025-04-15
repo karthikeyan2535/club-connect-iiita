@@ -6,7 +6,7 @@ import { toast as sonnerToast } from 'sonner';
 import { verifyEmail } from '../../services/auth';
 import MainLayout from '../../components/layout/MainLayout';
 import { Button } from '../../components/ui/button';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import { Alert, AlertDescription } from "../../components/ui/alert";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -24,6 +25,7 @@ const VerifyEmail = () => {
 
   const [status, setStatus] = useState('verifying'); // verifying, success, error
   const [errorMessage, setErrorMessage] = useState('');
+  const [detailedError, setDetailedError] = useState('');
 
   useEffect(() => {
     const verifyEmailToken = async () => {
@@ -34,6 +36,7 @@ const VerifyEmail = () => {
       if (!email) {
         setStatus('error');
         setErrorMessage('Invalid verification link - missing email');
+        setDetailedError('The verification link is missing required parameters. Please ensure you clicked the correct link from your email.');
         return;
       }
       
@@ -41,6 +44,7 @@ const VerifyEmail = () => {
       if (!token) {
         setStatus('error');
         setErrorMessage('Invalid verification link - missing token');
+        setDetailedError('The verification link is missing the verification token. Please ensure you clicked the correct link from your email.');
         return;
       }
       
@@ -60,6 +64,7 @@ const VerifyEmail = () => {
         } else {
           setStatus('error');
           setErrorMessage(response.message || 'Verification failed');
+          setDetailedError('There was a problem verifying your email. This could be because the token has expired or was already used.');
           toast({
             title: "Verification failed",
             description: response.message,
@@ -71,6 +76,7 @@ const VerifyEmail = () => {
         console.error("Error verifying email:", error);
         setStatus('error');
         setErrorMessage('An error occurred during verification');
+        setDetailedError('There was an unexpected error while processing your verification. Please try again or contact support.');
         toast({
           title: "Error",
           description: "An error occurred during verification",
@@ -89,6 +95,11 @@ const VerifyEmail = () => {
         <Card className="max-w-md mx-auto">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold">Email Verification</CardTitle>
+            {status === 'error' && (
+              <CardDescription className="text-red-500">
+                {errorMessage}
+              </CardDescription>
+            )}
           </CardHeader>
           
           <CardContent className="text-center py-6">
@@ -124,7 +135,16 @@ const VerifyEmail = () => {
                   <XCircle className="h-16 w-16 text-red-500" />
                 </div>
                 <h3 className="text-xl font-medium">Verification failed</h3>
-                <p className="text-gray-500">{errorMessage || 'There was a problem verifying your email.'}</p>
+                
+                {detailedError && (
+                  <Alert variant="destructive" className="text-left mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{detailedError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <p className="text-gray-500">There was a problem verifying your email.</p>
+                
                 <div className="pt-4">
                   <Link to="/login">
                     <Button variant="outline" className="mr-2">

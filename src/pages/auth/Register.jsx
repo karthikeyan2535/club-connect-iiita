@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
@@ -8,7 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Eye, EyeOff, User, Mail, Check, X, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Check, X, Loader2, Info } from 'lucide-react';
 import { register, sendVerificationEmail } from '../../services/auth';
 import {
   Card,
@@ -18,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [verificationLink, setVerificationLink] = useState('');
+  const [registrationError, setRegistrationError] = useState('');
 
   // Check if user is already logged in
   useEffect(() => {
@@ -54,6 +57,7 @@ const Register = () => {
   
   const handleRegister = async (e) => {
     e.preventDefault();
+    setRegistrationError('');
     
     // Form validation
     if (!validateEmail(email)) {
@@ -124,6 +128,7 @@ const Register = () => {
           console.log(`✉️ DEMO: Verification link for ${email}: ${response.verificationLink}`);
         }
       } else {
+        setRegistrationError(response.message);
         toast({
           title: "Registration failed",
           description: response.message,
@@ -133,6 +138,7 @@ const Register = () => {
       }
     } catch (error) {
       console.error("Error during registration:", error);
+      setRegistrationError("An unexpected error occurred. Please try again.");
       toast({
         title: "Error",
         description: "Failed to register. Please try again.",
@@ -202,6 +208,14 @@ const Register = () => {
           </CardHeader>
           
           <CardContent>
+            {registrationError && (
+              <Alert variant="destructive" className="mb-6">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Registration Error</AlertTitle>
+                <AlertDescription>{registrationError}</AlertDescription>
+              </Alert>
+            )}
+            
             {!registrationComplete ? (
               // Registration Form
               <form onSubmit={handleRegister} className="space-y-6">
