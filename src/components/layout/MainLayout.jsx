@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -6,6 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { supabase } from '../../integrations/supabase/client';
+import { getCurrentUser, signOut } from '../../services/auth';
 
 const MainLayout = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
@@ -15,80 +16,118 @@ const MainLayout = ({ children }) => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Check if user is logged in on component mount
-    const loadUserData = () => {
-      try {
-        const storedUserRole = localStorage.getItem('userRole');
-        const storedUser = localStorage.getItem('user');
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session ? 'User is logged in' : 'User is logged out');
         
-        if (storedUserRole) {
-          setUserRole(storedUserRole);
-        } else {
-          setUserRole(null);
-        }
-        
-        if (storedUser) {
+        if (session) {
           try {
-            const parsedUser = JSON.parse(storedUser);
-            console.log("Loaded user data:", parsedUser);
-            setUser(parsedUser);
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+              console.log('User authenticated:', currentUser);
+              setUser(currentUser);
+              setUserRole(currentUser.role || 'student'); // Default to student if role is missing
+              
+              // Also store in localStorage as backup
+              localStorage.setItem('user', JSON.stringify(currentUser));
+              localStorage.setItem('userRole', currentUser.role || 'student');
+            }
           } catch (error) {
-            console.error("Error parsing user from localStorage:", error);
-            // Clear corrupted user data
-            localStorage.removeItem('user');
-            setUser(null);
+            console.error('Error setting user data:', error);
           }
         } else {
+          console.log('User is logged out, clearing state');
           setUser(null);
+          setUserRole(null);
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
         }
         
         setIsInitialized(true);
+      }
+    );
+    
+    // Check for existing session on component mount
+    const initializeAuth = async () => {
+      try {
+        // Try to get current user from Supabase
+        const currentUser = await getCurrentUser();
+        
+        if (currentUser) {
+          console.log('Existing user found:', currentUser);
+          setUser(currentUser);
+          setUserRole(currentUser.role || 'student');
+          
+          // Also store in localStorage as backup
+          localStorage.setItem('user', JSON.stringify(currentUser));
+          localStorage.setItem('userRole', currentUser.role || 'student');
+        } else {
+          console.log('No authenticated user found');
+          // Check localStorage as fallback
+          const storedUserRole = localStorage.getItem('userRole');
+          const storedUser = localStorage.getItem('user');
+          
+          if (storedUser && storedUserRole) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              console.log('Using stored user data:', parsedUser);
+              setUser(parsedUser);
+              setUserRole(storedUserRole);
+            } catch (error) {
+              console.error('Error parsing stored user data:', error);
+              localStorage.removeItem('user');
+              localStorage.removeItem('userRole');
+            }
+          } else {
+            setUser(null);
+            setUserRole(null);
+          }
+        }
       } catch (error) {
-        console.error("Error loading user data:", error);
-        setUserRole(null);
-        setUser(null);
+        console.error('Error initializing auth:', error);
+      } finally {
         setIsInitialized(true);
       }
     };
     
-    loadUserData();
+    initializeAuth();
     
-    // Function to handle storage changes
-    const handleStorageChange = () => {
-      loadUserData();
-    };
-    
-    // Listen for storage events (from other tabs)
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Create a custom event listener for this tab
-    window.addEventListener('localStorageChange', handleStorageChange);
-    
+    // Cleanup subscription on unmount
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChange', handleStorageChange);
+      subscription?.unsubscribe();
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log("Logout initiated");
     
-    // Clear user data from localStorage
-    localStorage.removeItem('user');
-    localStorage.removeItem('userRole');
-    setUserRole(null);
-    setUser(null);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new Event('localStorageChange'));
-    
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account",
-    });
-    
-    // Redirect to homepage after logout
-    navigate('/');
+    try {
+      const result = await signOut();
+      
+      if (result.success) {
+        toast({
+          title: "Logged out successfully",
+          description: "You have been logged out of your account",
+        });
+        
+        // Navigate to homepage after logout
+        navigate('/');
+      } else {
+        toast({
+          title: "Logout failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while logging out",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!isInitialized) {
@@ -104,6 +143,7 @@ const MainLayout = ({ children }) => {
     );
   }
 
+  
   return (
     <div className="flex flex-col min-h-screen">
       <div className="bg-primary py-3 px-4 md:px-6 flex items-center justify-between">

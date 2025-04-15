@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Settings } from 'lucide-react';
 
 const Navbar = ({ userRole, user, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +11,9 @@ const Navbar = ({ userRole, user, onLogout }) => {
   const handleLogout = () => {
     setIsOpen(false);
     setShowProfileMenu(false);
-    onLogout && onLogout();
+    if (onLogout && typeof onLogout === 'function') {
+      onLogout();
+    }
   };
 
   const handleNavLinkClick = () => {
@@ -23,8 +25,9 @@ const Navbar = ({ userRole, user, onLogout }) => {
   };
 
   // Safe access to user properties with fallbacks
-  const userName = user && user.name ? user.name : 'User';
+  const userName = user && user.name ? user.name : (user?.email ? user.email.split('@')[0] : 'User');
   const userEmail = user && user.email ? user.email : '';
+  const safeUserRole = userRole || (user && user.role ? user.role : '');
 
   return (
     <nav className="bg-primary text-white">
@@ -72,25 +75,31 @@ const Navbar = ({ userRole, user, onLogout }) => {
             >
               About
             </Link>
-            {userRole && (
+            {safeUserRole && (
               <Link 
-                to={`/${userRole === 'student' ? 'student' : 'organizer'}/dashboard`}
+                to={`/${safeUserRole === 'student' ? 'student' : 'organizer'}/dashboard`}
                 className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-foreground/10 text-white"
                 onClick={handleNavLinkClick}
               >
                 Dashboard
               </Link>
             )}
-            {userRole ? (
+            {user ? (
               <>
-                <Link 
-                  to="/profile" 
-                  className="flex items-center px-3 py-2 rounded-md text-base font-medium hover:bg-primary-foreground/10 text-white"
-                  onClick={handleNavLinkClick}
-                >
-                  <User className="h-5 w-5 mr-2" />
-                  Profile
-                </Link>
+                <div className="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-foreground/10 text-white">
+                  <div className="flex items-center">
+                    <User className="h-5 w-5 mr-2" />
+                    <div>
+                      <p className="font-medium">{userName}</p>
+                      <p className="text-xs text-white/70">{userEmail}</p>
+                      {safeUserRole && (
+                        <span className="text-xs bg-white/20 text-white rounded-full px-2 py-0.5 inline-block mt-1 capitalize">
+                          {safeUserRole}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <button 
                   onClick={handleLogout}
                   className="flex items-center w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-primary-foreground/10 text-white"
@@ -126,7 +135,7 @@ const Navbar = ({ userRole, user, onLogout }) => {
         <div className="container mx-auto">
           <div className="flex items-center justify-between py-4">
             {/* User Profile Dropdown - Only shown when logged in */}
-            {userRole && user && (
+            {user && (
               <div className="relative ml-auto">
                 <button 
                   onClick={toggleProfileMenu}
@@ -144,19 +153,29 @@ const Navbar = ({ userRole, user, onLogout }) => {
                       {userEmail && (
                         <div className="text-sm text-gray-500 mt-1">{userEmail}</div>
                       )}
-                      {userRole && (
+                      {safeUserRole && (
                         <div className="text-xs bg-primary/10 text-primary rounded-full px-2 py-1 inline-block mt-2 capitalize">
-                          {userRole}
+                          {safeUserRole}
                         </div>
                       )}
                     </div>
                     <div className="py-1">
+                      {safeUserRole && (
+                        <Link 
+                          to={`/${safeUserRole === 'student' ? 'student' : 'organizer'}/dashboard`}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowProfileMenu(false)}
+                        >
+                          Dashboard
+                        </Link>
+                      )}
                       <Link 
-                        to={`/${userRole === 'student' ? 'student' : 'organizer'}/dashboard`}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        to="/profile"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setShowProfileMenu(false)}
                       >
-                        Dashboard
+                        <Settings className="h-4 w-4 mr-2" />
+                        Profile Settings
                       </Link>
                       <button 
                         onClick={handleLogout}

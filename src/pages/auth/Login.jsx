@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/button';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
+import { supabase } from '../../integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,13 +26,28 @@ const Login = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedUserRole = localStorage.getItem('userRole');
+    const checkAuthStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Get user role from profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('user_role')
+            .eq('id', session.user.id)
+            .single();
+            
+          const userRole = profileData?.user_role || 'student';
+          
+          // User is already logged in, redirect to dashboard
+          navigate(`/${userRole}/dashboard`);
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      }
+    };
     
-    if (storedUser && storedUserRole) {
-      // User is already logged in, redirect to dashboard
-      navigate(`/${storedUserRole}/dashboard`);
-    }
+    checkAuthStatus();
   }, [navigate]);
 
   const validateForm = () => {
@@ -70,16 +87,9 @@ const Login = () => {
       console.log("Login response:", response);
       
       if (response.success) {
-        // Save user data in localStorage
-        localStorage.setItem('user', JSON.stringify(response.user));
-        localStorage.setItem('userRole', response.user.role);
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new Event('localStorageChange'));
-        
         toast({
           title: "Login successful",
-          description: `Welcome back, ${response.user.name}!`,
+          description: `Welcome back, ${response.user.name || response.user.email.split('@')[0]}!`,
         });
         
         // Redirect based on user role
@@ -184,7 +194,12 @@ const Login = () => {
                 className="w-full py-6 text-lg"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : 'Sign in'}
               </Button>
             </form>
             

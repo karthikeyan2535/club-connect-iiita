@@ -1,105 +1,8 @@
-// This is a mock service for authentication
-// In a real application, this would connect to a backend
 
-// Mock database of users
-const users = [
-  { id: 1, email: 'student@iiita.ac.in', password: 'password123', role: 'student', name: 'John Doe', emailVerified: true },
-  { id: 2, email: 'organizer@iiita.ac.in', password: 'password123', role: 'organizer', name: 'Jane Smith', emailVerified: true }
-];
+import { supabase } from '../integrations/supabase/client';
 
-// Mock email verification tokens with expiration
-const emailVerificationTokens = {};
-
-// Mock OTP storage
-const otpStore = {};
-
-const generateEmailVerificationToken = (email) => {
-  // Generate a random token (in a real app, this would be a cryptographically secure token)
-  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  
-  // Store token with expiration (24 hours)
-  emailVerificationTokens[email] = {
-    token: token,
-    expiry: Date.now() + 24 * 60 * 60 * 1000
-  };
-  
-  console.log(`Verification token generated for ${email}: ${token}`); // In a real app, this would be sent via email
-  
-  return token;
-};
-
-export const sendVerificationEmail = (email) => {
-  console.log(`Sending verification email to ${email}`);
-  
-  // Check if email exists and is valid
-  if (!email) {
-    return { 
-      success: false, 
-      message: 'Email is required' 
-    };
-  }
-  
-  if (!email.endsWith('@iiita.ac.in')) {
-    return { 
-      success: false, 
-      message: 'Please use a valid IIITA email address' 
-    };
-  }
-  
-  // Generate and store verification token
-  const token = generateEmailVerificationToken(email);
-  
-  // Create a proper verification link - ensure it's an absolute URL
-  const verificationLink = `/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-  
-  // In a real app, this is where an actual email would be sent
-  console.log(`✉️ VERIFICATION EMAIL SENT to ${email}`);
-  console.log(`📧 Subject: Verify your IIITA Clubs account`);
-  console.log(`📝 Body: Please verify your email by clicking this link: ${verificationLink}`);
-  
-  return { 
-    success: true, 
-    message: 'Verification email has been sent. Please check your inbox.',
-    // For demo purposes - in a real app, this would be sent via email
-    verificationLink: verificationLink
-  };
-};
-
-export const verifyEmail = (email, token) => {
-  console.log(`Verifying email for ${email} with token: ${token}`);
-  
-  const storedVerification = emailVerificationTokens[email];
-  
-  if (!storedVerification) {
-    console.log('No verification token found for this email');
-    return { success: false, message: 'Invalid or expired verification link' };
-  }
-  
-  if (Date.now() > storedVerification.expiry) {
-    console.log('Verification token expired');
-    delete emailVerificationTokens[email];
-    return { success: false, message: 'Verification link has expired' };
-  }
-  
-  if (storedVerification.token === token) {
-    console.log('Email verified successfully');
-    delete emailVerificationTokens[email];
-    
-    // Find pending user registration and mark email as verified
-    const pendingUser = users.find(u => u.email === email && !u.emailVerified);
-    if (pendingUser) {
-      pendingUser.emailVerified = true;
-      console.log(`Email verified for user: ${pendingUser.name}`);
-    }
-    
-    return { success: true, message: 'Email verified successfully' };
-  }
-  
-  console.log('Invalid verification token');
-  return { success: false, message: 'Invalid verification link' };
-};
-
-export const login = (email, password) => {
+// Login with email and password
+export const login = async (email, password) => {
   console.log(`Login attempt for ${email}`);
   
   if (!email || !password) {
@@ -109,46 +12,50 @@ export const login = (email, password) => {
     };
   }
   
-  if (!email.endsWith('@iiita.ac.in')) {
-    return { 
-      success: false, 
-      message: 'Please use a valid IIITA email address' 
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      console.log('Login error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    // Get additional user profile data (role, name, etc.)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+    
+    if (profileError) {
+      console.log('Profile fetch error:', profileError.message);
+      return { success: true, message: 'Login successful but failed to fetch profile', user: data.user };
+    }
+    
+    // Combine auth data with profile data
+    const userWithProfile = {
+      ...data.user,
+      name: profileData.full_name,
+      role: profileData.user_role
     };
-  }
-  
-  const user = users.find(u => u.email === email);
-  
-  if (!user) {
-    console.log('User not found');
-    return { success: false, message: 'User not found' };
-  }
-  
-  if (user.password !== password) {
-    console.log('Invalid password');
-    return { success: false, message: 'Invalid password' };
-  }
-  
-  if (!user.emailVerified) {
-    console.log('Email not verified');
+    
+    console.log('Login successful for', userWithProfile.name);
     return { 
-      success: false, 
-      message: 'Please verify your email before logging in',
-      pendingVerification: true 
+      success: true, 
+      message: 'Login successful', 
+      user: userWithProfile
     };
+  } catch (error) {
+    console.error('Unexpected error during login:', error);
+    return { success: false, message: 'An unexpected error occurred' };
   }
-  
-  // Don't return password in response
-  const { password: _, ...userWithoutPassword } = user;
-  
-  console.log('Login successful for', userWithoutPassword.name);
-  return { 
-    success: true, 
-    message: 'Login successful', 
-    user: userWithoutPassword 
-  };
 };
 
-export const register = (email, password, name, role) => {
+// Register a new user
+export const register = async (email, password, name, role) => {
   console.log(`Registration attempt for ${email} as ${role}`);
   
   // Check required fields
@@ -159,94 +66,77 @@ export const register = (email, password, name, role) => {
     };
   }
   
-  // Validate email format
-  if (!email.endsWith('@iiita.ac.in')) {
-    return { 
-      success: false, 
-      message: 'Please use a valid IIITA email address' 
-    };
+  try {
+    // Create the user in Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          user_role: role
+        }
+      }
+    });
+    
+    if (error) {
+      console.log('Registration error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    console.log('New user registered:', data.user.email);
+    
+    // Check if email confirmation is required
+    if (data.session === null) {
+      // Return verification link only for demo purposes
+      const verificationLink = `/verify-email?email=${encodeURIComponent(email)}`;
+      
+      return {
+        success: true,
+        message: 'Registration successful. Please check your email to verify your account.',
+        verificationLink
+      };
+    } else {
+      // User was auto-confirmed
+      return {
+        success: true,
+        message: 'Registration successful. You can now log in.',
+        user: data.user
+      };
+    }
+  } catch (error) {
+    console.error('Unexpected error during registration:', error);
+    return { success: false, message: 'An unexpected error occurred' };
   }
-  
-  // Check if email exists
-  const userExists = users.find(u => u.email === email);
-  
-  if (userExists) {
-    console.log('User already exists');
-    return { success: false, message: 'User with this email already exists' };
-  }
-  
-  // Create new user (but not verified yet)
-  const newUser = {
-    id: users.length + 1,
-    email,
-    password,
-    name,
-    role,
-    emailVerified: false // Email not verified yet
-  };
-  
-  // In a real app, this would be saved to a database
-  users.push(newUser);
-  console.log('New user registered (pending verification):', newUser.email);
-  
-  // Generate verification token and "send" verification email
-  const verificationResponse = sendVerificationEmail(email);
-  
-  return { 
-    success: true, 
-    message: 'Registration successful. Please check your email to verify your account.', 
-    verificationLink: verificationResponse.verificationLink // For demo purposes only
-  };
 };
 
-// Helper function to check if user exists (for development/demo)
-export const getUserByEmail = (email) => {
-  return users.find(u => u.email === email);
+// Verify email
+export const verifyEmail = async (email, token) => {
+  console.log(`Verifying email for ${email} with token: ${token}`);
+  
+  try {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'signup'
+    });
+    
+    if (error) {
+      console.log('Email verification error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    console.log('Email verified successfully');
+    return { success: true, message: 'Email verified successfully' };
+  } catch (error) {
+    console.error('Unexpected error during email verification:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
 };
 
-// Reset password functionality
-export const resetPassword = (email, newPassword) => {
-  console.log(`Password reset attempt for ${email}`);
-  
-  const user = users.find(u => u.email === email);
-  
-  if (!user) {
-    console.log('User not found');
-    return { success: false, message: 'User not found' };
-  }
-  
-  // Update password
-  user.password = newPassword;
-  console.log('Password updated for:', email);
-  
-  return {
-    success: true,
-    message: 'Password reset successful'
-  };
-};
-
-// Function for resending verification email
-export const resendVerificationEmail = (email) => {
-  console.log(`Resending verification email to ${email}`);
-  
-  const user = users.find(u => u.email === email);
-  
-  if (!user) {
-    console.log('User not found');
-    return { success: false, message: 'User not found' };
-  }
-  
-  if (user.emailVerified) {
-    console.log('Email already verified');
-    return { success: false, message: 'Email already verified' };
-  }
-  
-  return sendVerificationEmail(email);
-};
-
-// New OTP-related functions
-export const sendVerificationOTP = (email) => {
-  console.log(`Sending verification OTP to ${email}`);
+// Send verification email
+export const sendVerificationEmail = async (email) => {
+  console.log(`Sending verification email to ${email}`);
   
   if (!email) {
     return { 
@@ -255,54 +145,137 @@ export const sendVerificationOTP = (email) => {
     };
   }
   
-  if (!email.endsWith('@iiita.ac.in')) {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email
+    });
+    
+    if (error) {
+      console.log('Resend verification error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    console.log('Verification email sent successfully');
+    
+    // For demo purposes only - in a real app, this would be sent via email
+    const verificationLink = `/verify-email?email=${encodeURIComponent(email)}`;
+    
     return { 
-      success: false, 
-      message: 'Please use a valid IIITA email address' 
+      success: true, 
+      message: 'Verification email has been sent. Please check your inbox.',
+      verificationLink
     };
+  } catch (error) {
+    console.error('Unexpected error when sending verification email:', error);
+    return { success: false, message: 'An unexpected error occurred' };
   }
-  
-  // Generate a 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  // Store OTP with expiration (10 minutes)
-  otpStore[email] = {
-    otp: otp,
-    expiry: Date.now() + 10 * 60 * 1000 // 10 minutes
-  };
-  
-  console.log(`OTP sent to ${email}: ${otp}`); // In a real app, this would be sent via email
-  
-  return { 
-    success: true, 
-    message: 'Verification code has been sent to your email',
-    otp: otp // For demo purposes only - in a real app, this would be sent via email
-  };
 };
 
-export const verifyEmailOTP = (email, otp) => {
-  console.log(`Verifying OTP for ${email}: ${otp}`);
+// Reset password functionality
+export const resetPassword = async (email, newPassword) => {
+  console.log(`Password reset attempt for ${email}`);
   
-  const storedOTP = otpStore[email];
-  
-  if (!storedOTP) {
-    console.log('No OTP found for this email');
-    return { success: false, message: 'Invalid or expired verification code' };
-  }
-  
-  if (Date.now() > storedOTP.expiry) {
-    console.log('OTP expired');
-    delete otpStore[email];
-    return { success: false, message: 'Verification code has expired' };
-  }
-  
-  if (storedOTP.otp === otp) {
-    console.log('OTP verified successfully');
-    delete otpStore[email];
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
     
-    return { success: true, message: 'Email verified successfully' };
+    if (error) {
+      console.log('Password reset error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    console.log('Password updated for:', email);
+    
+    return {
+      success: true,
+      message: 'Password reset successful'
+    };
+  } catch (error) {
+    console.error('Unexpected error during password reset:', error);
+    return { success: false, message: 'An unexpected error occurred' };
   }
+};
+
+// Send password reset email
+export const sendPasswordResetEmail = async (email) => {
+  console.log(`Sending password reset email to ${email}`);
   
-  console.log('Invalid OTP');
-  return { success: false, message: 'Invalid verification code' };
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password'
+    });
+    
+    if (error) {
+      console.log('Password reset email error:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    return {
+      success: true,
+      message: 'Password reset instructions have been sent to your email'
+    };
+  } catch (error) {
+    console.error('Unexpected error when sending password reset email:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
+};
+
+// Helper functions for session management
+export const getCurrentUser = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Error getting session:', error.message);
+      return null;
+    }
+    
+    if (!session) {
+      return null;
+    }
+    
+    // Get additional user profile data
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error getting user profile:', profileError.message);
+      return session.user;
+    }
+    
+    // Combine auth user with profile data
+    if (profileData) {
+      return {
+        ...session.user,
+        name: profileData.full_name,
+        role: profileData.user_role
+      };
+    }
+    
+    return session.user;
+  } catch (error) {
+    console.error('Unexpected error when getting current user:', error);
+    return null;
+  }
+};
+
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Error signing out:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    return { success: true, message: 'Signed out successfully' };
+  } catch (error) {
+    console.error('Unexpected error when signing out:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
 };
