@@ -188,7 +188,6 @@ const Login = () => {
                     if (loginError) setLoginError('');
                   }}
                   className={`w-full ${errors.email ? 'border-red-500' : ''}`}
-                  required
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-500">{errors.email}</p>
@@ -215,7 +214,6 @@ const Login = () => {
                     if (loginError) setLoginError('');
                   }}
                   className={`w-full ${errors.password ? 'border-red-500' : ''}`}
-                  required
                 />
                 {errors.password && (
                   <p className="mt-1 text-xs text-red-500">{errors.password}</p>

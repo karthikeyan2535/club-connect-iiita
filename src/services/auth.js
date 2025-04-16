@@ -12,12 +12,6 @@ export const login = async (email, password) => {
   }
   
   try {
-    // Clear any previous session first to avoid conflicts
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      console.warn('Error clearing previous session:', signOutError.message);
-    }
-    
     // Attempt to login with the provided credentials
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -52,7 +46,8 @@ export const login = async (email, password) => {
         user: { 
           ...data.user,
           role: 'student' // Default fallback role
-        } 
+        },
+        session: data.session
       };
     }
     
@@ -66,7 +61,6 @@ export const login = async (email, password) => {
     // Store user info in localStorage for persistence
     localStorage.setItem('user', JSON.stringify(userWithProfile));
     localStorage.setItem('userRole', profileData?.user_role || 'student');
-    localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
     
     console.log('Login successful for', userWithProfile.name);
     return { 
@@ -311,7 +305,6 @@ export const signOut = async () => {
     // Clear local storage
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
-    localStorage.removeItem('supabase.auth.token');
     
     const { error } = await supabase.auth.signOut();
     
