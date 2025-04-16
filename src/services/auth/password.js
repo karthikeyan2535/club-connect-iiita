@@ -1,5 +1,5 @@
 
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../../integrations/supabase/client';
 
 // Reset password functionality
 export const resetPassword = async (email, newPassword) => {

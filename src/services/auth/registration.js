@@ -1,5 +1,5 @@
 
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '../../integrations/supabase/client';
 
 // Register a new user
 export const register = async (email, password, name, role) => {
