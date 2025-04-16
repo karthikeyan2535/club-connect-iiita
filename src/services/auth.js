@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 // Login with email and password
@@ -12,15 +13,29 @@ export const login = async (email, password) => {
   }
   
   try {
+    // Clear any previous session first to avoid conflicts
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.warn('Error clearing previous session:', signOutError.message);
+    }
+    
+    // Attempt to login with the provided credentials
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
     if (error) {
-      console.log('Login error:', error.message);
+      console.error('Login error:', error.message);
       return { success: false, message: error.message };
     }
+
+    if (!data.user || !data.session) {
+      console.error('Login response missing user or session data');
+      return { success: false, message: 'Login failed: missing user data' };
+    }
+    
+    console.log('Authentication successful, fetching profile data');
     
     // Get additional user profile data (role, name, etc.)
     const { data: profileData, error: profileError } = await supabase
@@ -30,8 +45,16 @@ export const login = async (email, password) => {
       .single();
     
     if (profileError) {
-      console.log('Profile fetch error:', profileError.message);
-      return { success: true, message: 'Login successful but failed to fetch profile', user: data.user };
+      console.error('Profile fetch error:', profileError.message);
+      // Still return success but note the profile fetch issue
+      return { 
+        success: true, 
+        message: 'Login successful but failed to fetch profile', 
+        user: { 
+          ...data.user,
+          role: 'student' // Default fallback role
+        } 
+      };
     }
     
     // Combine auth data with profile data
@@ -40,6 +63,10 @@ export const login = async (email, password) => {
       name: profileData.full_name,
       role: profileData.user_role
     };
+    
+    // Store user info in localStorage for persistence
+    localStorage.setItem('user', JSON.stringify(userWithProfile));
+    localStorage.setItem('userRole', profileData.user_role);
     
     console.log('Login successful for', userWithProfile.name);
     return { 
@@ -239,6 +266,7 @@ export const getCurrentUser = async () => {
     }
     
     if (!session) {
+      console.log('No authenticated session found');
       return null;
     }
     
@@ -247,9 +275,9 @@ export const getCurrentUser = async () => {
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle instead of single to avoid errors
     
-    if (profileError && profileError.code !== 'PGRST116') {
+    if (profileError) {
       console.error('Error getting user profile:', profileError.message);
       return session.user;
     }
@@ -272,6 +300,10 @@ export const getCurrentUser = async () => {
 
 export const signOut = async () => {
   try {
+    // Clear local storage
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    
     const { error } = await supabase.auth.signOut();
     
     if (error) {

@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import { supabase } from '../../integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from "../../components/ui/alert";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [errors, setErrors] = useState({
     email: '',
     password: ''
@@ -28,19 +30,33 @@ const Login = () => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
+        console.log("Checking auth status...");
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (session) {
+          console.log("User is already logged in", session);
+          
           // Get user role from profile
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('user_role')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
             
-          const userRole = profileData?.user_role || 'student';
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+          }
           
-          // User is already logged in, redirect to dashboard
+          const userRole = profileData?.user_role || 'student';
+          console.log("User role:", userRole);
+          
+          // Store role in localStorage
+          localStorage.setItem('userRole', userRole);
+          
+          // Redirect to dashboard
           navigate(`/${userRole}/dashboard`);
+        } else {
+          console.log("User is not logged in");
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
@@ -75,6 +91,9 @@ const Login = () => {
     e.preventDefault();
     console.log("Login form submitted");
     
+    // Clear any previous error
+    setLoginError('');
+    
     if (!validateForm()) {
       console.log("Form validation failed");
       return;
@@ -92,13 +111,15 @@ const Login = () => {
           description: `Welcome back, ${response.user.name || response.user.email.split('@')[0]}!`,
         });
         
+        // Store user role in localStorage
+        localStorage.setItem('userRole', response.user.role);
+        
         // Redirect based on user role
-        if (response.user.role === 'organizer') {
-          navigate('/organizer/dashboard');
-        } else {
-          navigate('/student/dashboard');
-        }
+        const userRole = response.user.role || 'student';
+        navigate(`/${userRole}/dashboard`);
       } else {
+        setLoginError(response.message || 'Login failed. Please check your credentials.');
+        
         toast({
           title: "Login failed",
           description: response.message,
@@ -107,6 +128,8 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      setLoginError('An unexpected error occurred. Please try again.');
+      
       toast({
         title: "Error",
         description: "Failed to login. Please try again.",
@@ -126,6 +149,13 @@ const Login = () => {
               <h2 className="text-3xl font-bold">Welcome back</h2>
               <p className="text-gray-600 mt-2">Sign in to your account</p>
             </div>
+            
+            {loginError && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
             
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
@@ -154,6 +184,7 @@ const Login = () => {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     if (errors.email) setErrors({...errors, email: ''});
+                    if (loginError) setLoginError('');
                   }}
                   className={`w-full ${errors.email ? 'border-red-500' : ''}`}
                   required
@@ -180,6 +211,7 @@ const Login = () => {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (errors.password) setErrors({...errors, password: ''});
+                    if (loginError) setLoginError('');
                   }}
                   className={`w-full ${errors.password ? 'border-red-500' : ''}`}
                   required
