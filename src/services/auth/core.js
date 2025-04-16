@@ -1,0 +1,140 @@
+
+import { supabase } from '../integrations/supabase/client';
+
+// Login with email and password
+export const login = async (email, password) => {
+  console.log(`Login attempt for ${email}`);
+  
+  if (!email || !password) {
+    return { 
+      success: false, 
+      message: 'Email and password are required' 
+    };
+  }
+  
+  try {
+    // Attempt to login with the provided credentials
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      console.error('Login error:', error.message);
+      return { success: false, message: error.message };
+    }
+
+    if (!data.user || !data.session) {
+      console.error('Login response missing user or session data');
+      return { success: false, message: 'Login failed: missing user data' };
+    }
+    
+    console.log('Authentication successful, fetching profile data');
+    
+    // Get additional user profile data (role, name, etc.)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    
+    if (profileError) {
+      console.error('Profile fetch error:', profileError.message);
+      // Still return success but note the profile fetch issue
+      return { 
+        success: true, 
+        message: 'Login successful but failed to fetch profile', 
+        user: { 
+          ...data.user,
+          role: 'student' // Default fallback role
+        },
+        session: data.session
+      };
+    }
+    
+    // Combine auth data with profile data
+    const userWithProfile = {
+      ...data.user,
+      name: profileData?.full_name || data.user.email.split('@')[0],
+      role: profileData?.user_role || 'student'
+    };
+    
+    // Store user info in localStorage for persistence
+    localStorage.setItem('user', JSON.stringify(userWithProfile));
+    localStorage.setItem('userRole', profileData?.user_role || 'student');
+    
+    console.log('Login successful for', userWithProfile.name);
+    return { 
+      success: true, 
+      message: 'Login successful', 
+      user: userWithProfile,
+      session: data.session
+    };
+  } catch (error) {
+    console.error('Unexpected error during login:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
+};
+
+// Helper functions for session management
+export const getCurrentUser = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Error getting session:', error.message);
+      return null;
+    }
+    
+    if (!session) {
+      console.log('No authenticated session found');
+      return null;
+    }
+    
+    // Get additional user profile data
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+    
+    if (profileError) {
+      console.error('Error getting user profile:', profileError.message);
+      return session.user;
+    }
+    
+    // Combine auth user with profile data
+    if (profileData) {
+      return {
+        ...session.user,
+        name: profileData.full_name,
+        role: profileData.user_role
+      };
+    }
+    
+    return session.user;
+  } catch (error) {
+    console.error('Unexpected error when getting current user:', error);
+    return null;
+  }
+};
+
+export const signOut = async () => {
+  try {
+    // Clear local storage
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Error signing out:', error.message);
+      return { success: false, message: error.message };
+    }
+    
+    return { success: true, message: 'Signed out successfully' };
+  } catch (error) {
+    console.error('Unexpected error when signing out:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
+};
