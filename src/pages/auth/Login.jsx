@@ -45,6 +45,7 @@ const Login = () => {
             
           if (profileError) {
             console.error("Error fetching profile:", profileError);
+            return;
           }
           
           const userRole = profileData?.user_role || 'student';

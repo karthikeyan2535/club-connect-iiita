@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -18,28 +19,48 @@ const MainLayout = ({ children }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session ? 'User is logged in' : 'User is logged out');
         
         if (session) {
-          try {
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              console.log('User authenticated:', currentUser);
-              setUser(currentUser);
-              setUserRole(currentUser.role || 'student'); // Default to student if role is missing
+          // Use setTimeout to avoid potential deadlocks
+          setTimeout(async () => {
+            try {
+              // Get user profile from profiles table
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+                
+              if (profileError) {
+                console.error('Profile fetch error:', profileError);
+                return;
+              }
               
-              // Also store in localStorage as backup
-              localStorage.setItem('user', JSON.stringify(currentUser));
-              localStorage.setItem('userRole', currentUser.role || 'student');
+              const userWithProfile = {
+                ...session.user,
+                name: profileData?.full_name || session.user.email.split('@')[0],
+                role: profileData?.user_role || 'student'
+              };
+              
+              console.log('User authenticated:', userWithProfile);
+              setUser(userWithProfile);
+              setUserRole(profileData?.user_role || 'student');
+              
+              // Store in localStorage as backup
+              localStorage.setItem('user', JSON.stringify(userWithProfile));
+              localStorage.setItem('userRole', profileData?.user_role || 'student');
+            } catch (error) {
+              console.error('Error setting user data:', error);
             }
-          } catch (error) {
-            console.error('Error setting user data:', error);
-          }
+          }, 0);
         } else {
           console.log('User is logged out, clearing state');
           setUser(null);
           setUserRole(null);
+          
+          // Clear localStorage
           localStorage.removeItem('user');
           localStorage.removeItem('userRole');
         }
@@ -52,18 +73,34 @@ const MainLayout = ({ children }) => {
     const initializeAuth = async () => {
       try {
         // Try to get current user from Supabase
-        const currentUser = await getCurrentUser();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (currentUser) {
-          console.log('Existing user found:', currentUser);
-          setUser(currentUser);
-          setUserRole(currentUser.role || 'student');
+        if (session) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
           
-          // Also store in localStorage as backup
-          localStorage.setItem('user', JSON.stringify(currentUser));
-          localStorage.setItem('userRole', currentUser.role || 'student');
+          if (profileError) {
+            console.error('Error getting user profile:', profileError);
+            setIsInitialized(true);
+            return;
+          }
+          
+          const userWithProfile = {
+            ...session.user,
+            name: profileData?.full_name || session.user.email.split('@')[0],
+            role: profileData?.user_role || 'student'
+          };
+          
+          setUser(userWithProfile);
+          setUserRole(profileData?.user_role || 'student');
+          
+          // Store in localStorage as backup
+          localStorage.setItem('user', JSON.stringify(userWithProfile));
+          localStorage.setItem('userRole', profileData?.user_role || 'student');
         } else {
-          console.log('No authenticated user found');
           // Check localStorage as fallback
           const storedUserRole = localStorage.getItem('userRole');
           const storedUser = localStorage.getItem('user');
@@ -71,7 +108,6 @@ const MainLayout = ({ children }) => {
           if (storedUser && storedUserRole) {
             try {
               const parsedUser = JSON.parse(storedUser);
-              console.log('Using stored user data:', parsedUser);
               setUser(parsedUser);
               setUserRole(storedUserRole);
             } catch (error) {

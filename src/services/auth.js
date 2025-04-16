@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 
 // Login with email and password
@@ -42,7 +41,7 @@ export const login = async (email, password) => {
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
     
     if (profileError) {
       console.error('Profile fetch error:', profileError.message);
@@ -60,19 +59,21 @@ export const login = async (email, password) => {
     // Combine auth data with profile data
     const userWithProfile = {
       ...data.user,
-      name: profileData.full_name,
-      role: profileData.user_role
+      name: profileData?.full_name || data.user.email.split('@')[0],
+      role: profileData?.user_role || 'student'
     };
     
     // Store user info in localStorage for persistence
     localStorage.setItem('user', JSON.stringify(userWithProfile));
-    localStorage.setItem('userRole', profileData.user_role);
+    localStorage.setItem('userRole', profileData?.user_role || 'student');
+    localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
     
     console.log('Login successful for', userWithProfile.name);
     return { 
       success: true, 
       message: 'Login successful', 
-      user: userWithProfile
+      user: userWithProfile,
+      session: data.session
     };
   } catch (error) {
     console.error('Unexpected error during login:', error);
@@ -130,7 +131,14 @@ export const register = async (email, password, name, role) => {
         verificationLink
       };
     } else {
-      // User was auto-confirmed
+      // User was auto-confirmed - set the user role in localStorage
+      localStorage.setItem('userRole', role);
+      localStorage.setItem('user', JSON.stringify({
+        ...data.user,
+        name: name,
+        role: role
+      }));
+      
       return {
         success: true,
         message: 'Registration successful. You can now log in.',
@@ -303,6 +311,7 @@ export const signOut = async () => {
     // Clear local storage
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('supabase.auth.token');
     
     const { error } = await supabase.auth.signOut();
     
