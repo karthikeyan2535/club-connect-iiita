@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
@@ -36,19 +35,8 @@ const Login = () => {
         if (session) {
           console.log("User is already logged in", session);
           
-          // Get user role from profile
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_role')
-            .eq('id', session.user.id)
-            .maybeSingle();
-            
-          if (profileError) {
-            console.error("Error fetching profile:", profileError);
-            return;
-          }
-          
-          const userRole = profileData?.user_role || 'student';
+          // Extract user role from metadata or localStorage
+          const userRole = session.user.user_metadata?.user_role || localStorage.getItem('userRole') || 'student';
           console.log("User role:", userRole);
           
           // Store role in localStorage
@@ -103,6 +91,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log(`Attempting to login with email: ${email} and role: ${role}`);
       const response = await login(email, password);
       console.log("Login response:", response);
       
@@ -112,13 +101,16 @@ const Login = () => {
           description: `Welcome back, ${response.user.name || response.user.email.split('@')[0]}!`,
         });
         
-        // Store user role in localStorage
-        localStorage.setItem('userRole', response.user.role);
+        // Make sure user role is stored in localStorage
+        const userRole = response.user.role || role;
+        localStorage.setItem('userRole', userRole);
+        
+        console.log(`Redirecting to /${userRole}/dashboard`);
         
         // Redirect based on user role
-        const userRole = response.user.role || 'student';
         navigate(`/${userRole}/dashboard`);
       } else {
+        console.error("Login failed:", response.message);
         setLoginError(response.message || 'Login failed. Please check your credentials.');
         
         toast({
@@ -141,6 +133,7 @@ const Login = () => {
     }
   };
 
+  
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-12">

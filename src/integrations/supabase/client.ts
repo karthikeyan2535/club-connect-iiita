@@ -14,5 +14,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true
   }
 });
+
+// Set up debugging for auth state changes in development
+if (process.env.NODE_ENV !== 'production') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log(`Supabase Auth Event: ${event}`, session ? 'Session exists' : 'No session');
+  });
+}

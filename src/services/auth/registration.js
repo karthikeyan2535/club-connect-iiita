@@ -20,7 +20,7 @@ export const register = async (email, password, name, role) => {
       return { success: false, message: 'Invalid user role format' };
     }
     
-    // Step 1: Create the user in Supabase Auth with user_role in metadata
+    // Create the user in Supabase Auth with user_role in metadata
     console.log('Creating user with metadata:', { full_name: name, user_role: role });
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -38,7 +38,16 @@ export const register = async (email, password, name, role) => {
       return { success: false, message: error.message };
     }
     
-    console.log('User created in auth system:', data.user?.id);
+    console.log('User registration response:', data);
+    
+    if (!data.user) {
+      return { success: false, message: 'Failed to create user' };
+    }
+    
+    console.log('User created in auth system:', data.user.id);
+    
+    // For demo purposes - disable email verification requirement
+    // In production, you would handle email verification properly
     
     // Check if email confirmation is required
     if (data.session === null) {

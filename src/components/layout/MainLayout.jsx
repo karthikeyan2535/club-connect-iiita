@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -7,7 +6,6 @@ import { Button } from '../ui/button';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { supabase } from '../../integrations/supabase/client';
-import { getCurrentUser, signOut } from '../../services/auth';
 
 const MainLayout = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
@@ -26,31 +24,50 @@ const MainLayout = ({ children }) => {
           // Use setTimeout to avoid potential deadlocks
           setTimeout(async () => {
             try {
-              // Get user profile from profiles table
-              const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .maybeSingle();
-                
-              if (profileError) {
-                console.error('Profile fetch error:', profileError);
-                return;
-              }
+              const userData = session.user;
+              
+              // Get user metadata or profile data
+              const userRole = userData.user_metadata?.user_role || 'student';
+              const userName = userData.user_metadata?.full_name || userData.email.split('@')[0];
               
               const userWithProfile = {
-                ...session.user,
-                name: profileData?.full_name || session.user.email.split('@')[0],
-                role: profileData?.user_role || 'student'
+                ...userData,
+                name: userName,
+                role: userRole
               };
               
-              console.log('User authenticated:', userWithProfile);
+              console.log('User authenticated from session:', userWithProfile);
               setUser(userWithProfile);
-              setUserRole(profileData?.user_role || 'student');
+              setUserRole(userRole);
               
               // Store in localStorage as backup
               localStorage.setItem('user', JSON.stringify(userWithProfile));
-              localStorage.setItem('userRole', profileData?.user_role || 'student');
+              localStorage.setItem('userRole', userRole);
+              localStorage.setItem('session', JSON.stringify(session));
+              
+              // Try to fetch profile data - not critical if this fails
+              try {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', userData.id)
+                  .maybeSingle();
+                  
+                if (profileData) {
+                  const updatedUser = {
+                    ...userData,
+                    name: profileData.full_name || userName,
+                    role: profileData.user_role || userRole
+                  };
+                  
+                  setUser(updatedUser);
+                  setUserRole(profileData.user_role || userRole);
+                  localStorage.setItem('user', JSON.stringify(updatedUser));
+                  localStorage.setItem('userRole', profileData.user_role || userRole);
+                }
+              } catch (profileError) {
+                console.error('Non-critical error fetching profile:', profileError);
+              }
             } catch (error) {
               console.error('Error setting user data:', error);
             }
@@ -63,6 +80,7 @@ const MainLayout = ({ children }) => {
           // Clear localStorage
           localStorage.removeItem('user');
           localStorage.removeItem('userRole');
+          localStorage.removeItem('session');
         }
         
         setIsInitialized(true);
@@ -76,30 +94,49 @@ const MainLayout = ({ children }) => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
+          const userData = session.user;
+          const userMetadata = userData.user_metadata || {};
           
-          if (profileError) {
-            console.error('Error getting user profile:', profileError);
-            setIsInitialized(true);
-            return;
-          }
+          const userRole = userMetadata.user_role || 'student';
+          const userName = userMetadata.full_name || userData.email.split('@')[0];
           
           const userWithProfile = {
-            ...session.user,
-            name: profileData?.full_name || session.user.email.split('@')[0],
-            role: profileData?.user_role || 'student'
+            ...userData,
+            name: userName,
+            role: userRole
           };
           
           setUser(userWithProfile);
-          setUserRole(profileData?.user_role || 'student');
+          setUserRole(userRole);
           
           // Store in localStorage as backup
           localStorage.setItem('user', JSON.stringify(userWithProfile));
-          localStorage.setItem('userRole', profileData?.user_role || 'student');
+          localStorage.setItem('userRole', userRole);
+          localStorage.setItem('session', JSON.stringify(session));
+          
+          // Try to get profile data
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userData.id)
+              .maybeSingle();
+              
+            if (profileData) {
+              const updatedUser = {
+                ...userData,
+                name: profileData.full_name || userName,
+                role: profileData.user_role || userRole
+              };
+              
+              setUser(updatedUser);
+              setUserRole(profileData.user_role || userRole);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              localStorage.setItem('userRole', profileData.user_role || userRole);
+            }
+          } catch (profileError) {
+            console.error('Error getting profile data:', profileError);
+          }
         } else {
           // Check localStorage as fallback
           const storedUserRole = localStorage.getItem('userRole');
@@ -114,6 +151,7 @@ const MainLayout = ({ children }) => {
               console.error('Error parsing stored user data:', error);
               localStorage.removeItem('user');
               localStorage.removeItem('userRole');
+              localStorage.removeItem('session');
             }
           } else {
             setUser(null);
@@ -139,23 +177,34 @@ const MainLayout = ({ children }) => {
     console.log("Logout initiated");
     
     try {
-      const result = await signOut();
+      // Clear localStorage first for better UX
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('session');
       
-      if (result.success) {
-        toast({
-          title: "Logged out successfully",
-          description: "You have been logged out of your account",
-        });
-        
-        // Navigate to homepage after logout
-        navigate('/');
-      } else {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error signing out:', error);
         toast({
           title: "Logout failed",
-          description: result.message,
+          description: error.message,
           variant: "destructive",
         });
+        return;
       }
+      
+      // Update state
+      setUser(null);
+      setUserRole(null);
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+      
+      // Navigate to homepage after logout
+      navigate('/');
     } catch (error) {
       console.error("Error during logout:", error);
       toast({
