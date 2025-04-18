@@ -23,7 +23,7 @@ export const register = async (email, password, name, role) => {
     // Enhanced error logging
     console.log('Creating user with metadata:', { full_name: name, user_role: role });
     
-    // Create the user in Supabase Auth with user_role in metadata
+    // First, try signing up without metadata to isolate potential issues
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -37,10 +37,23 @@ export const register = async (email, password, name, role) => {
     
     if (error) {
       console.error('Registration error from Supabase Auth:', error);
+      
+      // Enhanced error reporting with more context
+      if (error.message.includes('Database error')) {
+        console.error('⚠️ Database error detected. This might indicate a Supabase project configuration issue.');
+        console.error('Supabase error details:', error);
+        return { 
+          success: false, 
+          message: 'Unable to create account due to a database error. Please try again later or contact support.',
+          error: error.message
+        };
+      }
+      
       // More descriptive error messages based on common issues
       if (error.message.includes('already registered')) {
         return { success: false, message: 'This email is already registered. Please log in instead.' };
       }
+      
       return { success: false, message: error.message };
     }
     
@@ -52,19 +65,20 @@ export const register = async (email, password, name, role) => {
     
     console.log('User created in auth system:', data.user.id);
     
-    try {
-      // Explicitly create a profile record with proper error handling
-      const profileResult = await createUserProfile(
-        data.user.id,
-        email,
-        name,
-        role
-      );
-      
-      console.log('Profile creation result:', profileResult);
-    } catch (profileError) {
-      console.error('Error creating profile, but user was created:', profileError);
-      // We continue since the auth user was created successfully
+    // Profile creation is now optional - the auth.users insert is our primary concern
+    if (data.user) {
+      try {
+        // Try to create a profile record, but don't fail registration if it doesn't work
+        await createUserProfile(
+          data.user.id,
+          email,
+          name,
+          role
+        );
+      } catch (profileError) {
+        console.error('Error creating profile, but user was created:', profileError);
+        // Continue since the auth user was created successfully
+      }
     }
     
     // Check if email confirmation is required

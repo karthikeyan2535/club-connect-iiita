@@ -6,6 +6,7 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://praerxbmkoggfnjztheb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByYWVyeGJta29nZ2Zuanp0aGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1MzQ4NTYsImV4cCI6MjA1OTExMDg1Nn0.N08SOuUDp3WJZEOvDSD5isWqUgNuka_FpzV2GCney3I";
 
+// Create a single, stable instance of the Supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,

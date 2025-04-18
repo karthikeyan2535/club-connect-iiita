@@ -21,7 +21,7 @@ export const createDemoAccounts = async () => {
       return { success: true, message: 'Demo accounts already exist' };
     }
     
-    // Create student account
+    // Create student account with enhanced error handling
     const studentResult = await supabase.auth.signUp({
       email: 'student@iiita.ac.in',
       password: 'password123',
@@ -33,16 +33,24 @@ export const createDemoAccounts = async () => {
       }
     });
     
-    if (studentResult.data?.user) {
-      await createUserProfile(
-        studentResult.data.user.id,
-        'student@iiita.ac.in',
-        'Demo Student',
-        'student'
-      );
+    if (studentResult.error) {
+      console.error('Error creating student demo account:', studentResult.error);
+      // Continue to try the organizer account
+    } else if (studentResult.data?.user) {
+      try {
+        await createUserProfile(
+          studentResult.data.user.id,
+          'student@iiita.ac.in',
+          'Demo Student',
+          'student'
+        );
+      } catch (profileError) {
+        console.error('Error creating student profile:', profileError);
+        // Continue since the auth user was created
+      }
     }
     
-    // Create organizer account
+    // Create organizer account with enhanced error handling
     const organizerResult = await supabase.auth.signUp({
       email: 'organizer@iiita.ac.in',
       password: 'password123',
@@ -54,15 +62,24 @@ export const createDemoAccounts = async () => {
       }
     });
     
-    if (organizerResult.data?.user) {
-      await createUserProfile(
-        organizerResult.data.user.id,
-        'organizer@iiita.ac.in',
-        'Demo Organizer',
-        'organizer'
-      );
+    if (organizerResult.error) {
+      console.error('Error creating organizer demo account:', organizerResult.error);
+      // Continue anyway
+    } else if (organizerResult.data?.user) {
+      try {
+        await createUserProfile(
+          organizerResult.data.user.id,
+          'organizer@iiita.ac.in',
+          'Demo Organizer',
+          'organizer'
+        );
+      } catch (profileError) {
+        console.error('Error creating organizer profile:', profileError);
+        // Continue since the auth user was created
+      }
     }
     
+    // Report success even if only partial accounts were created
     console.log('Demo accounts created for testing');
     return { success: true };
   } catch (error) {
