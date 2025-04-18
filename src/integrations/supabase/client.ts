@@ -15,11 +15,24 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Create a function to handle profile creation
+// Create a function to handle profile creation with better error handling
 export const createUserProfile = async (userId: string, email: string, fullName: string, userRole: 'student' | 'organizer' | 'admin') => {
   try {
     console.log('Creating profile for user:', { userId, email, fullName, userRole });
     
+    // Check if profile already exists to prevent duplicate errors
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (existingProfile) {
+      console.log('Profile already exists, skipping creation');
+      return { success: true, data: existingProfile };
+    }
+    
+    // Create profile with proper error handling
     const { data, error } = await supabase
       .from('profiles')
       .insert([
@@ -43,6 +56,32 @@ export const createUserProfile = async (userId: string, email: string, fullName:
   } catch (e) {
     console.error('Exception creating profile:', e);
     throw e;
+  }
+};
+
+// Helper function to get user profile by ID
+export const getUserProfile = async (userId: string) => {
+  try {
+    if (!userId) {
+      console.error('No user ID provided to getUserProfile');
+      return { success: false, error: 'No user ID provided' };
+    }
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (e) {
+    console.error('Exception fetching user profile:', e);
+    return { success: false, error: e };
   }
 };
 

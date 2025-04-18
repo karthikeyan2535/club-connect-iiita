@@ -4,6 +4,23 @@ import { supabase, createUserProfile } from '../integrations/supabase/client';
 // This function creates demo accounts for testing purposes
 export const createDemoAccounts = async () => {
   try {
+    // First check if accounts already exist to prevent errors
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('profiles')
+      .select('email')
+      .in('email', ['student@iiita.ac.in', 'organizer@iiita.ac.in']);
+      
+    if (checkError) {
+      console.error('Error checking for existing demo accounts:', checkError);
+      return { success: false, error: checkError };
+    }
+    
+    // Skip creation if accounts already exist
+    if (existingUsers && existingUsers.length >= 2) {
+      console.log('Demo accounts already exist, skipping creation');
+      return { success: true, message: 'Demo accounts already exist' };
+    }
+    
     // Create student account
     const studentResult = await supabase.auth.signUp({
       email: 'student@iiita.ac.in',
@@ -70,7 +87,7 @@ export const getDemoCredentials = () => {
   ];
 };
 
-// Function to create demo accounts on app initialization
+// Function to create demo accounts on app initialization with better error handling
 export const initializeDemoAccounts = async () => {
   try {
     // Check if demo accounts already exist

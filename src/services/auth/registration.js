@@ -1,3 +1,4 @@
+
 import { supabase, createUserProfile } from '../../integrations/supabase/client';
 
 // Register a new user
@@ -19,8 +20,10 @@ export const register = async (email, password, name, role) => {
       return { success: false, message: 'Invalid user role format' };
     }
     
-    // Create the user in Supabase Auth with user_role in metadata
+    // Enhanced error logging
     console.log('Creating user with metadata:', { full_name: name, user_role: role });
+    
+    // Create the user in Supabase Auth with user_role in metadata
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,6 +37,10 @@ export const register = async (email, password, name, role) => {
     
     if (error) {
       console.error('Registration error from Supabase Auth:', error);
+      // More descriptive error messages based on common issues
+      if (error.message.includes('already registered')) {
+        return { success: false, message: 'This email is already registered. Please log in instead.' };
+      }
       return { success: false, message: error.message };
     }
     
@@ -45,15 +52,20 @@ export const register = async (email, password, name, role) => {
     
     console.log('User created in auth system:', data.user.id);
     
-    // Explicitly create a profile record
-    const profileResult = await createUserProfile(
-      data.user.id,
-      email,
-      name,
-      role
-    );
-    
-    console.log('Profile creation result:', profileResult);
+    try {
+      // Explicitly create a profile record with proper error handling
+      const profileResult = await createUserProfile(
+        data.user.id,
+        email,
+        name,
+        role
+      );
+      
+      console.log('Profile creation result:', profileResult);
+    } catch (profileError) {
+      console.error('Error creating profile, but user was created:', profileError);
+      // We continue since the auth user was created successfully
+    }
     
     // Check if email confirmation is required
     if (data.session === null) {
@@ -82,11 +94,11 @@ export const register = async (email, password, name, role) => {
     }
   } catch (error) {
     console.error('Unexpected error during registration:', error);
-    return { success: false, message: 'An unexpected error occurred' };
+    return { success: false, message: 'An unexpected error occurred. Please try again later.' };
   }
 };
 
-// Verify email
+// Verify email with improved error handling
 export const verifyEmail = async (email, token) => {
   console.log(`Verifying email for ${email} with token: ${token}`);
   
@@ -99,6 +111,9 @@ export const verifyEmail = async (email, token) => {
     
     if (error) {
       console.log('Email verification error:', error.message);
+      if (error.message.includes('expired')) {
+        return { success: false, message: 'Verification link has expired. Please request a new one.' };
+      }
       return { success: false, message: error.message };
     }
     
@@ -106,11 +121,11 @@ export const verifyEmail = async (email, token) => {
     return { success: true, message: 'Email verified successfully' };
   } catch (error) {
     console.error('Unexpected error during email verification:', error);
-    return { success: false, message: 'An unexpected error occurred' };
+    return { success: false, message: 'An unexpected error occurred. Please try again.' };
   }
 };
 
-// Send verification email
+// Send verification email with improved error handling
 export const sendVerificationEmail = async (email) => {
   console.log(`Sending verification email to ${email}`);
   
@@ -144,6 +159,6 @@ export const sendVerificationEmail = async (email) => {
     };
   } catch (error) {
     console.error('Unexpected error when sending verification email:', error);
-    return { success: false, message: 'An unexpected error occurred' };
+    return { success: false, message: 'An unexpected error occurred. Please try again later.' };
   }
 };
