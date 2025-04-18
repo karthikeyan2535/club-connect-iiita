@@ -6,9 +6,6 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://praerxbmkoggfnjztheb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByYWVyeGJta29nZ2Zuanp0aGViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1MzQ4NTYsImV4cCI6MjA1OTExMDg1Nn0.N08SOuUDp3WJZEOvDSD5isWqUgNuka_FpzV2GCney3I";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
@@ -19,35 +16,42 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // Create a function to handle profile creation
-export const createUserProfile = async (userId, email, fullName, userRole) => {
+export const createUserProfile = async (userId: string, email: string, fullName: string, userRole: 'student' | 'organizer' | 'admin') => {
   try {
+    console.log('Creating profile for user:', { userId, email, fullName, userRole });
+    
     const { data, error } = await supabase
       .from('profiles')
       .insert([
         { 
           id: userId,
-          email: email,
+          email,
           full_name: fullName,
-          user_role: userRole || 'student'
+          user_role: userRole
         }
       ])
-      .select();
+      .select('*')
+      .single();
       
     if (error) {
       console.error('Error creating profile:', error);
-      return { success: false, error };
+      throw error;
     }
     
+    console.log('Profile created successfully:', data);
     return { success: true, data };
   } catch (e) {
     console.error('Exception creating profile:', e);
-    return { success: false, error: e };
+    throw e;
   }
-}
+};
 
 // Set up debugging for auth state changes in development
 if (process.env.NODE_ENV !== 'production') {
   supabase.auth.onAuthStateChange((event, session) => {
-    console.log(`Supabase Auth Event: ${event}`, session ? 'Session exists' : 'No session');
+    console.log(`Supabase Auth Event: ${event}`, { 
+      session: session ? 'exists' : 'none',
+      user: session?.user || null 
+    });
   });
 }

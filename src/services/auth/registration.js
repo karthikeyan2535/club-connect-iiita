@@ -1,4 +1,3 @@
-
 import { supabase, createUserProfile } from '../../integrations/supabase/client';
 
 // Register a new user
