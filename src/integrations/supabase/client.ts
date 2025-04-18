@@ -18,6 +18,33 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
+// Create a function to handle profile creation
+export const createUserProfile = async (userId, email, fullName, userRole) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([
+        { 
+          id: userId,
+          email: email,
+          full_name: fullName,
+          user_role: userRole || 'student'
+        }
+      ])
+      .select();
+      
+    if (error) {
+      console.error('Error creating profile:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (e) {
+    console.error('Exception creating profile:', e);
+    return { success: false, error: e };
+  }
+}
+
 // Set up debugging for auth state changes in development
 if (process.env.NODE_ENV !== 'production') {
   supabase.auth.onAuthStateChange((event, session) => {

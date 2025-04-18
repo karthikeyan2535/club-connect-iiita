@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
@@ -10,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { supabase } from '../../integrations/supabase/client';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { initializeDemoAccounts } from '../../seeds/demoAccounts';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,6 +26,19 @@ const Login = () => {
     email: '',
     password: ''
   });
+
+  // Initialize demo accounts when component mounts
+  useEffect(() => {
+    const setupDemoAccounts = async () => {
+      try {
+        await initializeDemoAccounts();
+      } catch (error) {
+        console.error("Error setting up demo accounts:", error);
+      }
+    };
+    
+    setupDemoAccounts();
+  }, []);
 
   // Check if user is already logged in
   useEffect(() => {

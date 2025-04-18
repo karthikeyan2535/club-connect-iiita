@@ -1,5 +1,5 @@
 
-import { supabase } from '../../integrations/supabase/client';
+import { supabase, createUserProfile } from '../../integrations/supabase/client';
 
 // Register a new user
 export const register = async (email, password, name, role) => {
@@ -46,8 +46,15 @@ export const register = async (email, password, name, role) => {
     
     console.log('User created in auth system:', data.user.id);
     
-    // For demo purposes - disable email verification requirement
-    // In production, you would handle email verification properly
+    // Explicitly create a profile record
+    const profileResult = await createUserProfile(
+      data.user.id,
+      email,
+      name,
+      role
+    );
+    
+    console.log('Profile creation result:', profileResult);
     
     // Check if email confirmation is required
     if (data.session === null) {
