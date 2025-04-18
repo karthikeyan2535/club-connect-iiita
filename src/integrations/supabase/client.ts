@@ -20,6 +20,12 @@ export const createUserProfile = async (userId: string, email: string, fullName:
   try {
     console.log('Creating profile for user:', { userId, email, fullName, userRole });
     
+    // Validate user role
+    if (!['student', 'organizer', 'admin'].includes(userRole)) {
+      console.error('Invalid role format:', userRole);
+      throw new Error('Invalid user role format');
+    }
+    
     // Check if profile already exists to prevent duplicate errors
     const { data: existingProfile } = await supabase
       .from('profiles')
