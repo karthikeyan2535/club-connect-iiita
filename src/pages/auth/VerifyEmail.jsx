@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
-import { verifyEmail } from '../../services/auth';
+import { verifyEmail, sendVerificationEmail } from '../../services/auth';
 import MainLayout from '../../components/layout/MainLayout';
 import { Button } from '../../components/ui/button';
-import { CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -26,34 +26,37 @@ const VerifyEmail = () => {
   const [status, setStatus] = useState('verifying'); // verifying, success, error
   const [errorMessage, setErrorMessage] = useState('');
   const [detailedError, setDetailedError] = useState('');
+  const [email, setEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     const verifyEmailToken = async () => {
-      const email = searchParams.get('email');
+      const emailParam = searchParams.get('email');
       const token = searchParams.get('token');
       const type = searchParams.get('type');
 
-      console.log("Verification parameters:", { email, token, type });
+      console.log("Verification parameters:", { email: emailParam, token, type });
+      setEmail(emailParam || '');
 
-      if (!email) {
+      if (!emailParam) {
         setStatus('error');
         setErrorMessage('Invalid verification link - missing email');
         setDetailedError('The verification link is missing required parameters. Please ensure you clicked the correct link from your email.');
         return;
       }
       
-      // Handle the case where token might be missing but we can still show the UI
+      // If token is missing, we just show the UI without attempting verification
       if (!token) {
         setStatus('error');
-        setErrorMessage('Invalid verification link - missing token');
-        setDetailedError('The verification link is missing the verification token. Please ensure you clicked the correct link from your email.');
+        setErrorMessage('Verification link is missing the token');
+        setDetailedError('You can request a new verification email using the button below.');
         return;
       }
       
-      console.log(`Attempting to verify email: ${email} with token: ${token}`);
+      console.log(`Attempting to verify email: ${emailParam} with token: ${token}`);
 
       try {
-        const response = await verifyEmail(email, token);
+        const response = await verifyEmail(emailParam, token);
         console.log("Verification response:", response);
         
         if (response.success) {
@@ -90,6 +93,46 @@ const VerifyEmail = () => {
 
     verifyEmailToken();
   }, [searchParams, toast]);
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast({
+        title: "Email Required",
+        description: "Please provide your email address to resend verification",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResending(true);
+    try {
+      const response = await sendVerificationEmail(email);
+      
+      if (response.success) {
+        toast({
+          title: "Email Sent",
+          description: "Verification email has been resent successfully",
+        });
+        sonnerToast.success("Verification email sent!");
+      } else {
+        toast({
+          title: "Failed to Send",
+          description: response.message || "Could not send verification email",
+          variant: "destructive",
+        });
+        sonnerToast.error(response.message || "Failed to send email");
+      }
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -146,6 +189,28 @@ const VerifyEmail = () => {
                 )}
                 
                 <p className="text-gray-500">There was a problem verifying your email.</p>
+                
+                {email && (
+                  <div className="mt-4">
+                    <Button 
+                      onClick={handleResendVerification}
+                      className="w-full"
+                      disabled={isResending}
+                    >
+                      {isResending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Resend verification email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
                 
                 <div className="pt-4">
                   <Link to="/login">

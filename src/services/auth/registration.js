@@ -31,7 +31,8 @@ export const register = async (email, password, name, role) => {
         data: {
           full_name: name,
           user_role: role
-        }
+        },
+        emailRedirectTo: window.location.origin + '/verify-email'
       }
     });
     
@@ -86,10 +87,17 @@ export const register = async (email, password, name, role) => {
       // Return verification link only for demo purposes
       const verificationLink = `/verify-email?email=${encodeURIComponent(email)}`;
       
+      // Log verification email status to help with debugging
+      console.log('⚠️ Verification email status:', 
+        data.user.email_confirmed_at ? 'Already confirmed' : 'Confirmation pending');
+      console.log('🔍 Check Supabase logs for email delivery status');
+      
       return {
         success: true,
         message: 'Registration successful. Please check your email to verify your account.',
-        verificationLink
+        verificationLink,
+        verificationPending: true,
+        userId: data.user.id
       };
     } else {
       // User was auto-confirmed - set the user role in localStorage
@@ -153,7 +161,10 @@ export const sendVerificationEmail = async (email) => {
   try {
     const { error } = await supabase.auth.resend({
       type: 'signup',
-      email
+      email,
+      options: {
+        emailRedirectTo: window.location.origin + '/verify-email'
+      }
     });
     
     if (error) {
