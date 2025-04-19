@@ -9,40 +9,34 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      budget_items: {
+      announcements: {
         Row: {
-          amount: number
           club_id: string
-          created_at: string
-          date: string
-          description: string | null
+          content: string
+          created_at: string | null
           id: string
-          name: string
-          type: string
+          title: string
+          updated_at: string | null
         }
         Insert: {
-          amount: number
           club_id: string
-          created_at?: string
-          date: string
-          description?: string | null
+          content: string
+          created_at?: string | null
           id?: string
-          name: string
-          type: string
+          title: string
+          updated_at?: string | null
         }
         Update: {
-          amount?: number
           club_id?: string
-          created_at?: string
-          date?: string
-          description?: string | null
+          content?: string
+          created_at?: string | null
           id?: string
-          name?: string
-          type?: string
+          title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "budget_items_club_id_fkey"
+            foreignKeyName: "announcements_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
@@ -54,20 +48,20 @@ export type Database = {
         Row: {
           club_id: string
           id: string
-          joined_at: string
-          member_id: string
+          joined_at: string | null
+          user_id: string
         }
         Insert: {
           club_id: string
           id?: string
-          joined_at?: string
-          member_id: string
+          joined_at?: string | null
+          user_id: string
         }
         Update: {
           club_id?: string
           id?: string
-          joined_at?: string
-          member_id?: string
+          joined_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -77,97 +71,63 @@ export type Database = {
             referencedRelation: "clubs"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "club_members_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       clubs: {
         Row: {
-          category: Database["public"]["Enums"]["club_category"]
-          cover_image_url: string | null
-          created_at: string
-          description: string
+          created_at: string | null
+          description: string | null
           id: string
-          is_active: boolean
           logo_url: string | null
           name: string
           organizer_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          category: Database["public"]["Enums"]["club_category"]
-          cover_image_url?: string | null
-          created_at?: string
-          description: string
+          created_at?: string | null
+          description?: string | null
           id?: string
-          is_active?: boolean
           logo_url?: string | null
           name: string
           organizer_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          category?: Database["public"]["Enums"]["club_category"]
-          cover_image_url?: string | null
-          created_at?: string
-          description?: string
+          created_at?: string | null
+          description?: string | null
           id?: string
-          is_active?: boolean
           logo_url?: string | null
           name?: string
           organizer_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "clubs_organizer_id_fkey"
-            columns: ["organizer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      event_participants: {
+      event_registrations: {
         Row: {
-          attended: boolean | null
           event_id: string
           id: string
-          participant_id: string
-          registration_date: string
+          registered_at: string | null
+          user_id: string
         }
         Insert: {
-          attended?: boolean | null
           event_id: string
           id?: string
-          participant_id: string
-          registration_date?: string
+          registered_at?: string | null
+          user_id: string
         }
         Update: {
-          attended?: boolean | null
           event_id?: string
           id?: string
-          participant_id?: string
-          registration_date?: string
+          registered_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "event_participants_event_id_fkey"
+            foreignKeyName: "event_registrations_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_participants_participant_id_fkey"
-            columns: ["participant_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -175,48 +135,39 @@ export type Database = {
       events: {
         Row: {
           club_id: string
-          created_at: string
-          description: string
-          end_date: string
+          created_at: string | null
+          description: string | null
+          end_time: string
           id: string
           image_url: string | null
-          is_active: boolean
-          location: string
-          max_participants: number | null
-          registration_deadline: string | null
-          start_date: string
+          location: string | null
+          start_time: string
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           club_id: string
-          created_at?: string
-          description: string
-          end_date: string
+          created_at?: string | null
+          description?: string | null
+          end_time: string
           id?: string
           image_url?: string | null
-          is_active?: boolean
-          location: string
-          max_participants?: number | null
-          registration_deadline?: string | null
-          start_date: string
+          location?: string | null
+          start_time: string
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           club_id?: string
-          created_at?: string
-          description?: string
-          end_date?: string
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
           id?: string
           image_url?: string | null
-          is_active?: boolean
-          location?: string
-          max_participants?: number | null
-          registration_deadline?: string | null
-          start_date?: string
+          location?: string | null
+          start_time?: string
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -231,33 +182,27 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          bio: string | null
-          created_at: string
-          department: string | null
-          email: string
-          full_name: string
+          created_at: string | null
+          full_name: string | null
           id: string
-          user_role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+          user_type: string
         }
         Insert: {
           avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          department?: string | null
-          email: string
-          full_name: string
+          created_at?: string | null
+          full_name?: string | null
           id: string
-          user_role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_type: string
         }
         Update: {
           avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          department?: string | null
-          email?: string
-          full_name?: string
+          created_at?: string | null
+          full_name?: string | null
           id?: string
-          user_role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+          user_type?: string
         }
         Relationships: []
       }
@@ -269,8 +214,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      club_category: "cultural" | "technical" | "sports" | "academic" | "other"
-      user_role: "student" | "organizer" | "admin"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -385,9 +329,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      club_category: ["cultural", "technical", "sports", "academic", "other"],
-      user_role: ["student", "organizer", "admin"],
-    },
+    Enums: {},
   },
 } as const
