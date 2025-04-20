@@ -1,5 +1,5 @@
 
-import { supabase, createUserProfile } from '../../integrations/supabase/client';
+import { supabase } from '../../integrations/supabase/client';
 
 // Register a new user
 export const register = async (email, password, name, role) => {
@@ -23,7 +23,7 @@ export const register = async (email, password, name, role) => {
     // Enhanced error logging
     console.log('Creating user with metadata:', { full_name: name, user_role: role });
     
-    // First, try signing up without metadata to isolate potential issues
+    // Sign up with Supabase, including metadata
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -32,7 +32,7 @@ export const register = async (email, password, name, role) => {
           full_name: name,
           user_role: role
         },
-        emailRedirectTo: window.location.origin + '/verify-email'
+        emailRedirectTo: `${window.location.origin}/verify-email`
       }
     });
     
@@ -42,7 +42,6 @@ export const register = async (email, password, name, role) => {
       // Enhanced error reporting with more context
       if (error.message.includes('Database error')) {
         console.error('⚠️ Database error detected. This might indicate a Supabase project configuration issue.');
-        console.error('Supabase error details:', error);
         return { 
           success: false, 
           message: 'Unable to create account due to a database error. Please try again later or contact support.',
@@ -65,22 +64,6 @@ export const register = async (email, password, name, role) => {
     }
     
     console.log('User created in auth system:', data.user.id);
-    
-    // Profile creation is now optional - the auth.users insert is our primary concern
-    if (data.user) {
-      try {
-        // Try to create a profile record, but don't fail registration if it doesn't work
-        await createUserProfile(
-          data.user.id,
-          email,
-          name,
-          role
-        );
-      } catch (profileError) {
-        console.error('Error creating profile, but user was created:', profileError);
-        // Continue since the auth user was created successfully
-      }
-    }
     
     // Check if email confirmation is required
     if (data.session === null) {
@@ -163,7 +146,7 @@ export const sendVerificationEmail = async (email) => {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: window.location.origin + '/verify-email'
+        emailRedirectTo: `${window.location.origin}/verify-email`
       }
     });
     

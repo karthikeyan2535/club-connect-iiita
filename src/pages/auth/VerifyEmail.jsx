@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
@@ -32,10 +31,9 @@ const VerifyEmail = () => {
   useEffect(() => {
     const verifyEmailToken = async () => {
       const emailParam = searchParams.get('email');
-      const token = searchParams.get('token');
-      const type = searchParams.get('type');
-
-      console.log("Verification parameters:", { email: emailParam, token, type });
+      const token = searchParams.get('token') || searchParams.get('type');
+      
+      console.log("Verification parameters:", { email: emailParam, token });
       setEmail(emailParam || '');
 
       if (!emailParam) {

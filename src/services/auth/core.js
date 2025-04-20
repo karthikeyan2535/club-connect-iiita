@@ -1,4 +1,3 @@
-
 import { supabase } from '../../integrations/supabase/client';
 
 // Login with email and password
@@ -24,6 +23,15 @@ export const login = async (email, password) => {
     
     if (error) {
       console.error('Login error:', error.message);
+      
+      // More descriptive error messages
+      if (error.message.includes('Invalid login credentials')) {
+        return { 
+          success: false, 
+          message: 'Invalid email or password. Please check your credentials and try again.' 
+        };
+      }
+      
       return { success: false, message: error.message };
     }
 
@@ -32,45 +40,26 @@ export const login = async (email, password) => {
       return { success: false, message: 'Login failed: missing user data' };
     }
     
-    console.log('Authentication successful, session:', data.session.access_token.substring(0, 10) + '...');
+    console.log('Authentication successful, session established');
     console.log('User data:', data.user);
     
-    // Get additional user profile data (role, name, etc.)
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .maybeSingle();
+    // Get user role from metadata
+    const userRole = data.user.user_metadata?.user_role || 'student';
+    const userName = data.user.user_metadata?.full_name || data.user.email.split('@')[0];
     
-    if (profileError) {
-      console.error('Profile fetch error:', profileError.message);
-      // Still return success but note the profile fetch issue
-      return { 
-        success: true, 
-        message: 'Login successful but failed to fetch profile', 
-        user: { 
-          ...data.user,
-          role: data.user.user_metadata?.user_role || 'student' // Get role from metadata as fallback
-        },
-        session: data.session
-      };
-    }
-    
-    console.log('Profile data:', profileData);
-    
-    // Combine auth data with profile data
+    // Create user object with profile data
     const userWithProfile = {
       ...data.user,
-      name: profileData?.full_name || data.user.user_metadata?.full_name || data.user.email.split('@')[0],
-      role: profileData?.user_role || data.user.user_metadata?.user_role || 'student'
+      name: userName,
+      role: userRole
     };
     
     // Store user info in localStorage for persistence
     localStorage.setItem('user', JSON.stringify(userWithProfile));
-    localStorage.setItem('userRole', userWithProfile.role);
+    localStorage.setItem('userRole', userRole);
     localStorage.setItem('session', JSON.stringify(data.session));
     
-    console.log('Login successful for', userWithProfile.name);
+    console.log('Login successful for', userWithProfile.name, 'with role', userRole);
     return { 
       success: true, 
       message: 'Login successful', 
